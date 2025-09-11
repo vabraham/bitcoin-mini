@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+httpx
+sqlmodel
+pydantic
+psycopg2-binary

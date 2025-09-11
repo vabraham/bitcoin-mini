@@ -1,0 +1,52 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: btc-mini-db
+    environment:
+      - POSTGRES_DB=btcmini
+      - POSTGRES_USER=btc
+      - POSTGRES_PASSWORD=btc
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U btc -d btcmini"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build: .
+    container_name: btc-mini-dev
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://btc:btc@db:5432/btcmini
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/app                # live code reload
+      - ./data:/app/data       # keep local files (if you ever switch to SQLite)
+    command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    restart: unless-stopped
+
+  metabase:
+    image: metabase/metabase:latest
+    container_name: btc-mini-metabase
+    depends_on:
+      - db
+    ports:
+      - "3000:3000"
+    environment:
+      - MB_JETTY_PORT=3000
+      - MB_DB_FILE=/metabase-data/metabase.db
+    volumes:
+      - mbdata:/metabase-data
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  mbdata:

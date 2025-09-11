@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bitcoin Mini Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#0b1220;--card:#121a2b;--muted:#8aa0b6;--accent:#f2a900;--text:#e8eef7;--ok:#1dd1a1;--warn:#ee5253}
+    *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto; background:var(--bg); color:var(--text)}
+    .wrap{max-width:960px;margin:0 auto;padding:24px}
+    .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+    .card{background:var(--card);border-radius:16px;padding:16px;box-shadow:0 4px 20px rgba(0,0,0,.25)}
+    h1{font-size:28px;margin:0 0 4px} h2{font-size:18px;margin:0 0 8px;color:var(--muted)}
+    button,input{font:inherit}
+    input[type=text]{width:100%;padding:10px 12px;border-radius:12px;border:1px solid #22314e;background:#0b1220;color:var(--text)}
+    button{background:var(--accent);color:#222;font-weight:700;border:none;border-radius:12px;padding:10px 14px;cursor:pointer}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:8px;border-bottom:1px solid #22314e}
+    .muted{color:var(--muted)} .pill{padding:2px 8px;border-radius:999px;background:#1b2440;color:#c7d2fe;font-weight:600}
+    .row{display:flex;gap:8px;align-items:center}
+    .footer{margin-top:24px;color:var(--muted);font-size:12px}
+    .warn{color:var(--warn)} .ok{color:var(--ok)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>₿ Bitcoin Mini Analytics</h1>
+    <h2 class="muted">Price • Fees • Watchlist • Events • Quantum Exposure</h2>
+
+    <div class="grid" style="margin-top:16px">
+      <div class="card">
+        <div class="row" style="justify-content:space-between">
+          <strong>Spot price</strong>
+          <span id="priceTime" class="muted"></span>
+        </div>
+        <div style="font-size:32px;margin:12px 0"><span id="price">—</span></div>
+        <div class="muted" id="priceSrc"></div>
+        <div style="margin-top:8px" class="row">
+          <button onclick="refreshPrice()">Refresh</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="row" style="justify-content:space-between">
+          <strong>Fee estimates (sat/vB)</strong>
+          <span id="feeTime" class="muted"></span>
+        </div>
+        <table>
+          <thead><tr><th>Profile</th><th>sat/vB</th></tr></thead>
+          <tbody>
+            <tr><td>Fastest</td><td id="fee_fast">—</td></tr>
+            <tr><td>Half Hour</td><td id="fee_half">—</td></tr>
+            <tr><td>Hour</td><td id="fee_hour">—</td></tr>
+            <tr><td>Economy</td><td id="fee_econ">—</td></tr>
+          </tbody>
+        </table>
+        <div style="margin-top:8px" class="row">
+          <button onclick="refreshFees()">Refresh</button>
+        </div>
+      </div>
+
+      <div class="card" style="grid-column:1/-1">
+        <strong>Add address to watchlist</strong>
+        <div class="row" style="margin-top:8px">
+          <input id="addr" type="text" placeholder="bc1... or 1/3..."/>
+          <input id="label" type="text" placeholder="Label (optional)"/>
+          <button onclick="addWatch()">Add</button>
+        </div>
+        <div id="addrErr" class="warn" style="margin-top:6px"></div>
+        <div style="margin-top:16px">
+          <table>
+            <thead><tr><th>Label</th><th>Address</th><th id="hdr_received">Received (BTC)</th><th id="hdr_balance">Balance (BTC)</th><th></th></tr></thead>
+            <tbody id="watchRows"></tbody>
+          </table>
+        </div>
+        <div class="row" style="justify-content:space-between; margin-top:8px">
+          <div class="row" style="gap:8px; align-items:center">
+            <span class="muted">Display units:</span>
+            <div class="row" style="gap:6px">
+              <button id="unit_btc">BTC</button>
+              <button id="unit_sats">sats</button>
+            </div>
+          </div>
+          <div class="row" style="gap:8px; align-items:center">
+            <div class="muted">Total:</div>
+            <div style="font-weight:700;">
+              <span id="total_primary">0.00000000</span> <span id="total_unit">BTC</span> • <span id="total_usd">$0.00</span>
+            </div>
+          </div>
+        </div>
+          <div style="font-weight:700; margin-left:8px">
+            <span id="total_btc">0.00000000</span> BTC • <span id="total_sats">0</span> sats • <span id="total_usd">$0.00</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="grid-column:1/-1">
+        <strong>Event log (client → backend)</strong>
+        <div class="row" style="gap:12px;margin-top:8px">
+          <button onclick="sendEvent('test_click')">Send test event</button>
+          <span class="muted">Your anonymous user id: <span id="uid" class="pill"></span></span>
+        </div>
+        <div style="margin-top:8px" class="muted">Use this for BI practice: events table collects ts, type, user_id, payload.</div>
+      </div>
+
+      <div class="card" style="grid-column:1/-1">
+        <strong>Quantum exposure checker</strong>
+        <div class="row" style="margin-top:8px">
+          <input id="qe_addr" type="text" placeholder="Paste a Bitcoin address (bc1q..., bc1p..., 1..., 3...)"/>
+          <button onclick="checkExposure()">Check</button>
+        </div>
+        <div id="qe_err" class="warn" style="margin-top:6px"></div>
+        <div class="row" style="gap:8px; margin-top:12px">
+          <div class="muted">Overall risk:</div>
+          <div id="qe_risk" class="pill">—</div>
+        </div>
+        <div id="qe_note" class="muted" style="margin-top:6px"></div>
+        <div style="margin-top:12px">
+          <table>
+            <thead><tr><th>UTXO</th><th>Type</th><th>Risk</th><th>Value (BTC)</th></tr></thead>
+            <tbody id="qe_rows"></tbody>
+          </table>
+        </div>
+        <div class="muted" style="margin-top:8px">Legend: <span class="ok">hashed</span> = pubkey not in script (P2WPKH/P2PKH). <span class="warn">exposed</span> = pubkey in script (Taproot/P2PK). Address reuse can expose pubkeys even for hashed types.</div>
+      </div>
+
+    </div>
+
+    <div class="footer">Starter app. Extend however you like — add Lightning invoice decode, address tags, cron refresh, dashboards, etc.</div>
+  </div>
+
+<script>
+// ====== Global state & helpers ======
+const uidKey = 'btcmini_uid';
+let UNIT = 'BTC';
+let watchRowsCache = [];
+let TOTAL_BTC = 0;
+let lastSpotUSD = null;
+
+function getUID(){ let u = localStorage.getItem(uidKey); if(!u){u = (crypto?.randomUUID?.() || String(Date.now())); localStorage.setItem(uidKey,u)} return u }
+function fmtUSD(x){ const n = Number(x); return isFinite(n) ? n.toLocaleString(undefined,{style:'currency',currency:'USD'}) : '—' }
+function ts(){ return new Date().toLocaleTimeString() }
+async function apiGet(url){ try{ const r = await fetch(url); if(!r.ok){ return null } return await r.json(); }catch{ return null } }
+
+// ====== Price & Fees ======
+async function refreshPrice(){
+  const j = await apiGet('/api/price');
+  if(!j || j.usd==null){
+    document.getElementById('price').textContent = '—';
+    document.getElementById('priceSrc').textContent = 'Price unavailable';
+    return;
+  }
+  lastSpotUSD = Number(j.usd) || 0;
+  document.getElementById('price').textContent = fmtUSD(lastSpotUSD);
+  document.getElementById('priceTime').textContent = ts();
+  document.getElementById('priceSrc').textContent = 'CoinGecko simple price';
+  renderTotals();
+  sendEvent('price_refresh', { usd: lastSpotUSD });
+}
+
+async function refreshFees(){
+  const j = await apiGet('/api/fees');
+  document.getElementById('fee_fast').textContent = j?.fastestFee ?? '—';
+  document.getElementById('fee_half').textContent = j?.halfHourFee ?? '—';
+  document.getElementById('fee_hour').textContent = j?.hourFee ?? '—';
+  document.getElementById('fee_econ').textContent = j?.economyFee ?? '—';
+  document.getElementById('feeTime').textContent = ts();
+  sendEvent('fees_refresh', j || {});
+}
+
+// ====== Watchlist (render + totals) ======
+function updateHeaders(){
+  const r = document.getElementById('hdr_received');
+  const b = document.getElementById('hdr_balance');
+  if(r) r.textContent = UNIT==='BTC' ? 'Received (BTC)' : 'Received (sats)';
+  if(b) b.textContent = UNIT==='BTC' ? 'Balance (BTC)' : 'Balance (sats)';
+  const tu = document.getElementById('total_unit');
+  if(tu) tu.textContent = UNIT==='BTC' ? 'BTC' : 'SATS';
+}
+function formatAmt(v){ const x = Number(v||0); return UNIT==='BTC' ? x.toFixed(8) : Math.floor(x*1e8).toLocaleString(); }
+
+function renderWatchlist(){
+  const tbody = document.getElementById('watchRows');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  for(const row of watchRowsCache){
+    const rec = Number(row.received_btc ?? 0) || 0;
+    const bal = Number(row.balance_btc ?? 0) || 0;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${row.label||''}</td><td class="muted">${row.address}</td><td>${formatAmt(rec)}</td><td>${formatAmt(bal)}</td><td><button data-addr="${row.address}">Refresh</button></td>`;
+    tr.querySelector('button').addEventListener('click', async (e)=>{
+      const addr = e.target.getAttribute('data-addr');
+      await fetch(`/api/address/${addr}`);
+      await loadWatch();
+      sendEvent('watch_refresh', { address: addr });
+    });
+    tbody.appendChild(tr);
+  }
+  updateHeaders();
+}
+
+function renderTotals(){
+  const primary = document.getElementById('total_primary');
+  if(primary) primary.textContent = UNIT==='BTC' ? (TOTAL_BTC||0).toFixed(8) : Math.floor((TOTAL_BTC||0)*1e8).toLocaleString();
+  const tu = document.getElementById('total_unit');
+  if(tu) tu.textContent = UNIT==='BTC' ? 'BTC' : 'SATS';
+  const usd = document.getElementById('total_usd');
+  if(usd) usd.textContent = lastSpotUSD!=null ? (TOTAL_BTC*lastSpotUSD).toLocaleString(undefined,{style:'currency',currency:'USD'}) : '—';
+}
+
+async function addWatch(){
+  const addr = document.getElementById('addr').value.trim();
+  const label = document.getElementById('label').value.trim();
+  const err = document.getElementById('addrErr');
+  err.textContent = '';
+  if(!addr){ err.textContent = 'Address required'; return }
+  const r = await fetch('/api/watchlist', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({address:addr, label})});
+  let j = {};
+  try{ j = await r.json(); }catch{}
+  if(!r.ok){ err.textContent = j?.detail || 'Error adding address'; return }
+  document.getElementById('addr').value=''; document.getElementById('label').value='';
+  await loadWatch();
+  sendEvent('watch_add', { address: addr, label });
+}
+
+async function loadWatch(){
+  const rows = await apiGet('/api/watchlist');
+  if(!rows){ return }
+  watchRowsCache = rows;
+  TOTAL_BTC = rows.reduce((a,r)=> a + (Number(r.balance_btc||0)||0), 0);
+  renderWatchlist();
+  renderTotals();
+}
+
+// ====== Quantum exposure ======
+async function checkExposure(){
+  const addr = document.getElementById('qe_addr').value.trim();
+  const err = document.getElementById('qe_err');
+  err.textContent = '';
+  if(!addr){ err.textContent = 'Address required'; return }
+  try{
+    const r = await fetch(`/api/quantum_exposure/${addr}`);
+    const j = await r.json();
+    if(!r.ok){ err.textContent = j.detail || 'Error checking address'; return }
+    document.getElementById('qe_risk').textContent = j.overall_risk.toUpperCase();
+    const tbody = document.getElementById('qe_rows');
+    tbody.innerHTML = '';
+    for(const u of j.utxos){
+      const tr = document.createElement('tr');
+      const utxo = `${(u.txid||'').slice(0,8)}:${u.vout}`;
+      tr.innerHTML = `<td class="muted">${utxo}</td><td>${u.scriptpubkey_type||'?'}</td><td>${u.risk}</td><td>${(u.value_btc||0).toFixed(8)}</td>`;
+      tbody.appendChild(tr);
+    }
+    document.getElementById('qe_note').textContent = (j.notes||[]).join(' ');
+    sendEvent('quantum_check', { address: addr, overall_risk: j.overall_risk, analyzed: j.analyzed_utxos });
+  }catch(e){ err.textContent = 'Network error'; }
+}
+
+// ====== Events & Unit toggle ======
+async function sendEvent(event_type, payload){
+  const user_id = getUID();
+  document.getElementById('uid').textContent = user_id;
+  try{ await fetch('/api/event', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({event_type, user_id, payload})}); }catch{}
+}
+
+function bindUnitToggle(){
+  const b = document.getElementById('unit_btc');
+  const s = document.getElementById('unit_sats');
+  if(b){ b.addEventListener('click', ()=>{ UNIT='BTC'; renderWatchlist(); renderTotals(); }); }
+  if(s){ s.addEventListener('click', ()=>{ UNIT='SATS'; renderWatchlist(); renderTotals(); }); }
+}
+
+// ====== Boot ======
+window.addEventListener('load', async ()=>{
+  document.getElementById('uid').textContent = getUID();
+  bindUnitToggle();
+  await refreshPrice();
+  await refreshFees();
+  await loadWatch();
+  sendEvent('page_view', { path: '/' });
+});
+</script>
+</body>
+</html>
