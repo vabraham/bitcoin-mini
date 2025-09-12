@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Bitcoin Mini",
+  "version": "1.0.0",
+  "description": "Simple Bitcoin price, fees, and address tracking",
+  
+  "permissions": ["storage"],
+  
+  "host_permissions": [
+    "https://api.coingecko.com/*",
+    "https://mempool.space/*",
+    "https://blockstream.info/*"
+  ],
+  
+  "action": {
+    "default_popup": "popup.html"
+  }
+}
