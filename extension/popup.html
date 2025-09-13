@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <title>Bitcoin Mini</title>
   <style>
-    body { margin: 0; font-family: system-ui; background: #0b1220; color: #e8eef7; width: 350px; }
+    body { margin: 0; font-family: system-ui; background: #0b1220; color: #e8eef7; width: 440px; }
     .card { background: #121a2b; border-radius: 8px; padding: 12px; margin: 8px 0; }
     h1 { margin: 0 0 8px; color: #f2a900; font-size: 16px; }
     input, button { padding: 8px; border-radius: 4px; border: 1px solid #333; }
@@ -15,6 +15,8 @@
       margin-bottom: 4px; 
       -webkit-user-select: text;
       user-select: text;
+      font-size: 13px;
+      box-sizing: border-box;
     }
     input:focus { outline: none; border-color: #f2a900; }
     button { background: #f2a900; color: #000; cursor: pointer; }
@@ -24,6 +26,64 @@
     .ok { color: #1dd1a1; }
     table { width: 100%; border-collapse: collapse; font-size: 12px; }
     th, td { padding: 4px; border-bottom: 1px solid #333; text-align: left; }
+    .price-up { color: #1dd1a1; }
+    .price-down { color: #ee5253; }
+    .price-neutral { color: #e8eef7; }
+    
+    /* Info button styling */
+    .info-btn {
+      cursor: pointer;
+      color: #8aa0b6;
+      font-size: 12px;
+      margin-left: 4px;
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #333;
+      text-align: center;
+      line-height: 16px;
+      transition: all 0.2s;
+    }
+    
+    .info-btn:hover {
+      background: #f2a900;
+      color: #000;
+    }
+    
+    /* Tooltip styling */
+    .tooltip {
+      position: absolute;
+      background: #121a2b;
+      border: 1px solid #333;
+      border-radius: 6px;
+      padding: 12px;
+      font-size: 11px;
+      line-height: 1.4;
+      max-width: 300px;
+      z-index: 1000;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      display: none;
+    }
+    
+    .tooltip.show {
+      display: block;
+    }
+    
+    .tooltip h4 {
+      margin: 0 0 8px 0;
+      color: #f2a900;
+      font-size: 12px;
+    }
+    
+    .tooltip ul {
+      margin: 0;
+      padding-left: 16px;
+    }
+    
+    .tooltip li {
+      margin: 4px 0;
+    }
   </style>
 </head>
 <body>
@@ -38,6 +98,7 @@
       </div>
       <div style="font-size: 20px; margin: 8px 0;">
         <span id="price">—</span>
+        <span id="priceChange" class="muted"></span>
       </div>
       <button id="refreshPriceBtn">Refresh</button>
     </div>
@@ -48,7 +109,7 @@
         <strong>Fees (sat/vB)</strong>
         <span id="feeTime" class="muted"></span>
       </div>
-      <table>
+      <table style="margin: 8px 0;">
         <tr><td>Fast</td><td id="fee_fast">—</td></tr>
         <tr><td>Hour</td><td id="fee_hour">—</td></tr>
         <tr><td>Econ</td><td id="fee_econ">—</td></tr>
@@ -56,38 +117,44 @@
       <button id="refreshFeesBtn">Refresh</button>
     </div>
     
-    <!-- Watchlist -->
+    <!-- Add Address -->
     <div class="card">
       <strong>Add Address</strong>
-      <input id="addr" type="text" placeholder="bc1... or 1/3..." autocomplete="off">
+      <input id="addr" type="text" placeholder="Bitcoin address" autocomplete="off">
       <input id="label" type="text" placeholder="Label (optional)" autocomplete="off">
       <button id="addWatchBtn">Add</button>
       <div id="addrErr" class="warn"></div>
       
       <table style="margin-top: 8px;">
         <thead>
-          <tr><th>Label</th><th>Address</th><th>Balance</th><th></th></tr>
+          <tr><th>Label</th><th>Address</th><th>Balance</th><th>Risk <span id="riskInfoBtn" class="info-btn" title="Click for risk level explanation">ⓘ</span></th><th style="text-align: right;">Action</th></tr>
         </thead>
         <tbody id="watchRows"></tbody>
       </table>
       
+      <!-- Risk explanation tooltip -->
+      <div id="riskTooltip" class="tooltip">
+        <h4>Address Risk Analysis</h4>
+        <ul>
+          <li><strong>🟢 Low:</strong> No quantum-vulnerable UTXOs found</li>
+          <li><strong>🟡 Elevated:</strong> Address has been reused (spent outputs)</li>
+          <li><strong>🔴 High:</strong> Contains P2PK or Taproot UTXOs vulnerable to quantum attacks</li>
+          <li><strong>❌ Error:</strong> Unable to analyze (API error)</li>
+          <li><strong>❓ Unknown:</strong> No UTXOs found or special case</li>
+        </ul>
+        <p><em>Analysis checks up to 5 most recent UTXOs for quantum vulnerability patterns.</em></p>
+      </div>
+      
       <div class="row">
         <span class="muted">Total: <span id="totalValue">0 BTC</span></span>
-        <button id="toggleUnitsBtn">Switch to sats</button>
+        <div style="display: flex; gap: 4px; margin-left: auto;">
+          <button id="toggleBtcBtn" class="unit-btn active">BTC</button>
+          <button id="toggleSatsBtn" class="unit-btn">SATS</button>
+          <button id="toggleUsdBtn" class="unit-btn">USD</button>
+        </div>
       </div>
     </div>
     
-    <!-- Quantum Check -->
-    <div class="card">
-      <strong>Quantum Check</strong>
-      <input id="qe_addr" type="text" placeholder="Address to check" autocomplete="off">
-      <button id="checkExposureBtn">Check</button>
-      <div id="qe_err" class="warn"></div>
-      <div class="row">
-        <span class="muted">Risk:</span>
-        <span id="qe_risk" class="ok">—</span>
-      </div>
-    </div>
   </div>
   
   <script src="popup.js"></script>

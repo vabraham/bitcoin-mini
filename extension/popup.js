@@ -34,13 +34,13 @@ class BitcoinMini {
     document.getElementById('refreshPriceBtn').onclick = () => this.refreshPrice();
     document.getElementById('refreshFeesBtn').onclick = () => this.refreshFees();
     document.getElementById('addWatchBtn').onclick = () => this.addWatch();
-    document.getElementById('checkExposureBtn').onclick = () => this.checkExposure();
-    document.getElementById('toggleUnitsBtn').onclick = () => this.toggleUnits();
+    document.getElementById('toggleBtcBtn').onclick = () => this.setUnit('BTC');
+    document.getElementById('toggleSatsBtn').onclick = () => this.setUnit('SATS');
+    document.getElementById('toggleUsdBtn').onclick = () => this.setUnit('USD');
     
     // Input elements
     const addrInput = document.getElementById('addr');
     const labelInput = document.getElementById('label');
-    const qeInput = document.getElementById('qe_addr');
     
     
     // Enter key support
@@ -58,10 +58,30 @@ class BitcoinMini {
       }
     });
     
-    qeInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        this.checkExposure();
+    // Risk info button tooltip
+    document.getElementById('riskInfoBtn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const tooltip = document.getElementById('riskTooltip');
+      tooltip.classList.toggle('show');
+      
+      // Position tooltip near the button
+      const rect = e.target.getBoundingClientRect();
+      tooltip.style.left = (rect.left - 250) + 'px';
+      tooltip.style.top = (rect.bottom + 5) + 'px';
+    });
+    
+    // Handle remove button clicks
+    document.addEventListener('click', (e) => {
+      if (e.target.classList.contains('remove-btn')) {
+        const index = parseInt(e.target.getAttribute('data-index'));
+        this.removeWatch(index);
+      }
+    });
+    
+    // Close tooltip when clicking elsewhere
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#riskInfoBtn') && !e.target.closest('#riskTooltip')) {
+        document.getElementById('riskTooltip').classList.remove('show');
       }
     });
   }
@@ -69,14 +89,48 @@ class BitcoinMini {
   // API Calls
   async refreshPrice() {
     try {
-      const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd');
-      const data = await response.json();
-      if (data?.bitcoin?.usd) {
-        document.getElementById('price').textContent = `$${data.bitcoin.usd.toLocaleString()}`;
+      // Fetch current price and historical data in parallel
+      const [currentResponse, historicalResponse] = await Promise.all([
+        fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd'),
+        fetch('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=365&interval=daily')
+      ]);
+      
+      const currentData = await currentResponse.json();
+      const historicalData = await historicalResponse.json();
+      
+      if (currentData?.bitcoin?.usd && historicalData?.prices) {
+        this.currentBtcPrice = currentData.bitcoin.usd;
+        const currentPrice = currentData.bitcoin.usd;
+        
+        // Get price from 365 days ago (first item in the array)
+        const prices = historicalData.prices;
+        const priceOneYearAgo = prices[0][1]; // [timestamp, price] - first item is oldest
+        
+        // Calculate YoY change: (current - old) / old * 100
+        const yoyChange = ((currentPrice - priceOneYearAgo) / priceOneYearAgo) * 100;
+        
+        // Display price
+        document.getElementById('price').textContent = `$${currentPrice.toLocaleString()}`;
+        
+        // Display YoY change with color coding
+        const changeEl = document.getElementById('priceChange');
+        if (yoyChange > 0.01) { // Only green if more than 0.01%
+          changeEl.textContent = `+${yoyChange.toFixed(2)}% YoY`;
+          changeEl.className = 'price-up';
+        } else if (yoyChange < -0.01) { // Only red if less than -0.01%
+          changeEl.textContent = `${yoyChange.toFixed(2)}% YoY`;
+          changeEl.className = 'price-down';
+        } else { // White for essentially no change
+          changeEl.textContent = `${yoyChange.toFixed(2)}% YoY`;
+          changeEl.className = 'price-neutral';
+        }
+        
         document.getElementById('priceTime').textContent = new Date().toLocaleTimeString();
       }
     } catch (error) {
+      console.error('Price fetch error:', error);
       document.getElementById('price').textContent = 'Error';
+      document.getElementById('priceChange').textContent = '';
     }
   }
   
@@ -118,15 +172,21 @@ class BitcoinMini {
     errEl.textContent = '';
     
     // Add to watchlist
-    const newItem = { address: addr, label: label || '', balance_btc: 0 };
+    const newItem = { address: addr, label: label || '', balance_btc: 0, quantum_risk: 'checking...' };
     this.watchlist.push(newItem);
     
-    // Fetch balance
+    // Fetch balance and check quantum exposure in parallel
     try {
-      const summary = await this.fetchAddressSummary(addr);
+      const [summary, quantumResult] = await Promise.all([
+        this.fetchAddressSummary(addr),
+        this.checkQuantumExposure(addr)
+      ]);
+      
       newItem.balance_btc = summary.balance_btc || 0;
+      newItem.quantum_risk = quantumResult.overall_risk;
     } catch (error) {
       console.error('Address fetch error:', error);
+      newItem.quantum_risk = 'error';
     }
     
     // Clear inputs and save
@@ -150,70 +210,64 @@ class BitcoinMini {
     };
   }
   
-  async checkExposure() {
-    const addr = document.getElementById('qe_addr').value.trim();
-    const errEl = document.getElementById('qe_err');
-    const riskEl = document.getElementById('qe_risk');
-    
-    if (!addr) {
-      errEl.textContent = 'Address required';
-      return;
-    }
-    
-    if (!this.validateAddress(addr)) {
-      errEl.textContent = 'Invalid Bitcoin address';
-      return;
-    }
-    
-    errEl.textContent = '';
-    riskEl.textContent = 'Checking...';
-    
-    try {
-      const result = await this.checkQuantumExposure(addr);
-      riskEl.textContent = result.overall_risk.toUpperCase();
-      riskEl.className = result.overall_risk === 'high' ? 'warn' : 'ok';
-      document.getElementById('qe_addr').value = '';
-    } catch (error) {
-      errEl.textContent = 'Check failed';
-      riskEl.textContent = '—';
-    }
-  }
   
   async checkQuantumExposure(address) {
-    const [addrInfo, utxos] = await Promise.all([
-      fetch(`https://blockstream.info/api/address/${address}`).then(r => r.json()),
-      fetch(`https://blockstream.info/api/address/${address}/utxo`).then(r => r.json())
-    ]);
-    
-    let exposedValue = 0;
-    let hasExposed = false;
-    
-    for (const utxo of utxos.slice(0, 5)) { // Limit to 5 for speed
-      try {
-        const tx = await fetch(`https://blockstream.info/api/tx/${utxo.txid}`).then(r => r.json());
-        const scriptType = tx.vout?.[utxo.vout]?.scriptpubkey_type;
-        
-        if (['p2pk', 'v1_p2tr'].includes(scriptType?.toLowerCase())) {
-          hasExposed = true;
-          exposedValue += (utxo.value || 0) / 1e8;
-        }
-      } catch (e) {
-        // Skip on error
+    try {
+      const [addrInfo, utxos] = await Promise.all([
+        fetch(`https://blockstream.info/api/address/${address}`).then(r => {
+          if (!r.ok) throw new Error(`Address API error: ${r.status}`);
+          return r.json();
+        }),
+        fetch(`https://blockstream.info/api/address/${address}/utxo`).then(r => {
+          if (!r.ok) throw new Error(`UTXO API error: ${r.status}`);
+          return r.json();
+        })
+      ]);
+      
+      let exposedValue = 0;
+      let hasExposed = false;
+      
+      // Handle case where utxos might be null or empty
+      if (!utxos || !Array.isArray(utxos)) {
+        console.warn('No UTXOs found for address:', address);
+        return { overall_risk: 'unknown', exposed_value_btc: 0 };
       }
+      
+      for (const utxo of utxos.slice(0, 5)) { // Limit to 5 for speed
+        try {
+          const tx = await fetch(`https://blockstream.info/api/tx/${utxo.txid}`).then(r => {
+            if (!r.ok) throw new Error(`Transaction API error: ${r.status}`);
+            return r.json();
+          });
+          const scriptType = tx.vout?.[utxo.vout]?.scriptpubkey_type;
+          
+          if (['p2pk', 'v1_p2tr'].includes(scriptType?.toLowerCase())) {
+            hasExposed = true;
+            exposedValue += (utxo.value || 0) / 1e8;
+          }
+        } catch (e) {
+          console.warn('Error checking UTXO:', utxo.txid, e.message);
+          // Skip on error
+        }
+      }
+      
+      const spentCount = addrInfo?.chain_stats?.spent_txo_count || 0;
+      const addressType = this.inferAddressType(address);
+      const reuseRisk = spentCount > 0 && ['p2pkh', 'p2wpkh_or_wsh'].includes(addressType);
+      
+      let overallRisk = 'low';
+      if (hasExposed) {
+        overallRisk = 'high';
+      } else if (reuseRisk) {
+        overallRisk = 'elevated';
+      }
+      
+      return { overall_risk: overallRisk, exposed_value_btc: exposedValue };
+      
+    } catch (error) {
+      console.error('Quantum exposure check failed for address:', address, error);
+      return { overall_risk: 'error', exposed_value_btc: 0 };
     }
-    
-    const spentCount = addrInfo.chain_stats?.spent_txo_count || 0;
-    const addressType = this.inferAddressType(address);
-    const reuseRisk = spentCount > 0 && ['p2pkh', 'p2wpkh_or_wsh'].includes(addressType);
-    
-    let overallRisk = 'low';
-    if (hasExposed) {
-      overallRisk = 'high';
-    } else if (reuseRisk) {
-      overallRisk = 'elevated';
-    }
-    
-    return { overall_risk: overallRisk, exposed_value_btc: exposedValue };
   }
   
   inferAddressType(address) {
@@ -237,18 +291,45 @@ class BitcoinMini {
     this.watchlist.forEach((item, index) => {
       const row = document.createElement('tr');
       const balance = this.formatAmount(item.balance_btc);
+      const risk = this.formatQuantumRisk(item.quantum_risk);
       
       row.innerHTML = `
         <td>${item.label || ''}</td>
         <td class="muted">${item.address.slice(0, 8)}...</td>
         <td>${balance}</td>
-        <td><button onclick="app.removeWatch(${index})">Remove</button></td>
+        <td class="${risk.class}">${risk.text}</td>
+        <td style="text-align: right;"><button class="remove-btn" data-index="${index}">Remove</button></td>
       `;
       
       tbody.appendChild(row);
     });
     
     this.updateTotal();
+  }
+  
+  formatQuantumRisk(risk) {
+    if (!risk || risk === 'checking...') {
+      return { text: 'Checking...', class: 'muted' };
+    }
+    
+    if (risk === 'error') {
+      return { text: '❌ Error', class: 'warn' };
+    }
+    
+    if (risk === 'unknown') {
+      return { text: '❓ Unknown', class: 'muted' };
+    }
+    
+    switch (risk.toLowerCase()) {
+      case 'high':
+        return { text: '🔴 High', class: 'warn' };
+      case 'elevated':
+        return { text: '🟡 Elevated', class: 'muted' };
+      case 'low':
+        return { text: '🟢 Low', class: 'ok' };
+      default:
+        return { text: '—', class: 'muted' };
+    }
   }
   
   async removeWatch(index) {
@@ -260,9 +341,13 @@ class BitcoinMini {
   formatAmount(btc) {
     if (this.unit === 'BTC') {
       return (btc || 0).toFixed(8);
-    } else {
+    } else if (this.unit === 'SATS') {
       return Math.floor((btc || 0) * 1e8).toLocaleString();
+    } else if (this.unit === 'USD') {
+      const usdValue = (btc || 0) * (this.currentBtcPrice || 0);
+      return '$' + usdValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
+    return (btc || 0).toFixed(8);
   }
   
   updateTotal() {
@@ -275,6 +360,19 @@ class BitcoinMini {
     this.unit = this.unit === 'BTC' ? 'SATS' : 'BTC';
     this.saveData();
     this.renderWatchlist();
+  }
+
+  setUnit(newUnit) {
+    this.unit = newUnit;
+    this.saveData();
+    this.renderWatchlist();
+    this.updateToggleButtons();
+  }
+
+  updateToggleButtons() {
+    document.querySelectorAll('.unit-btn').forEach(btn => btn.classList.remove('active'));
+    const activeBtn = document.getElementById(`toggle${this.unit}Btn`);
+    if (activeBtn) activeBtn.classList.add('active');
   }
 }
 
