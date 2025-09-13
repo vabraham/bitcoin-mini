@@ -84,6 +84,73 @@
     .tooltip li {
       margin: 4px 0;
     }
+    
+    /* Total value styling - Option 1 + 4 */
+    .total-value {
+      font-size: 15px;
+      font-weight: 600;
+      color: #f2a900;
+    }
+    
+    .total-label {
+      color: #e8eef7;
+    }
+    
+    /* Small remove button styling */
+    .remove-btn-small {
+      width: 20px;
+      height: 20px;
+      padding: 2px;
+      background: #f2a900;
+      color: #000;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    
+    .remove-btn-small:hover {
+      background: #e09900;
+    }
+    
+    .remove-btn-small::before {
+      content: "🗑️";
+      filter: contrast(3) brightness(0.4);
+      font-weight: 900;
+    }
+    
+    /* Fee category styling - 5 tier system */
+    .fee-very-low { color: #27ae60; }
+    .fee-low { color: #2ecc71; }
+    .fee-medium { color: #f39c12; }
+    .fee-high { color: #e67e22; }
+    .fee-very-high { color: #e74c3c; }
+    
+    /* Fee info button styling */
+    .fee-info-btn {
+      cursor: pointer;
+      color: #8aa0b6;
+      font-size: 12px;
+      margin-left: 4px;
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #333;
+      text-align: center;
+      line-height: 16px;
+      transition: all 0.2s;
+    }
+    
+    .fee-info-btn:hover {
+      background: #f2a900;
+      color: #000;
+    }
   </style>
 </head>
 <body>
@@ -110,11 +177,29 @@
         <span id="feeTime" class="muted"></span>
       </div>
       <table style="margin: 8px 0;">
-        <tr><td>Fast</td><td id="fee_fast">—</td></tr>
-        <tr><td>Hour</td><td id="fee_hour">—</td></tr>
-        <tr><td>Econ</td><td id="fee_econ">—</td></tr>
+        <thead>
+          <tr><th>Type</th><th>Fee</th><th>Category <span id="feeInfoBtn" class="fee-info-btn" title="Click for fee category explanation">ⓘ</span></th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Fast</td><td id="fee_fast">—</td><td id="fee_fast_category" class="fee-category">—</td></tr>
+          <tr><td>Hour</td><td id="fee_hour">—</td><td id="fee_hour_category" class="fee-category">—</td></tr>
+          <tr><td>Econ</td><td id="fee_econ">—</td><td id="fee_econ_category" class="fee-category">—</td></tr>
+        </tbody>
       </table>
       <button id="refreshFeesBtn">Refresh</button>
+      
+      <!-- Fee category explanation tooltip -->
+      <div id="feeTooltip" class="tooltip">
+        <h4>Fee Categories</h4>
+        <ul>
+          <li><strong class="fee-very-low">🟢 Very Low:</strong> &lt; 5 sat/vB - May take 12+ hours</li>
+          <li><strong class="fee-low">🟢 Low:</strong> 5-10 sat/vB - 6-12 hours</li>
+          <li><strong class="fee-medium">🟡 Medium:</strong> 10-50 sat/vB - 1-6 hours</li>
+          <li><strong class="fee-high">🟠 High:</strong> 50-100 sat/vB - 10-60 minutes</li>
+          <li><strong class="fee-very-high">🔴 Very High:</strong> &gt; 100 sat/vB - Next 1-2 blocks</li>
+        </ul>
+        <p><em>Based on historical Bitcoin network data and typical confirmation times.</em></p>
+      </div>
     </div>
     
     <!-- Add Address -->
@@ -146,7 +231,7 @@
       </div>
       
       <div class="row">
-        <span class="muted">Total: <span id="totalValue">0 BTC</span></span>
+        <span class="muted"><span class="total-label">Total:</span> <span id="totalValue" class="total-value">0 BTC</span></span>
         <div style="display: flex; gap: 4px; margin-left: auto;">
           <button id="toggleBtcBtn" class="unit-btn active">BTC</button>
           <button id="toggleSatsBtn" class="unit-btn">SATS</button>

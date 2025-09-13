@@ -64,24 +64,67 @@ class BitcoinMini {
       const tooltip = document.getElementById('riskTooltip');
       tooltip.classList.toggle('show');
       
-      // Position tooltip near the button
+      // Improved positioning - center tooltip relative to button
       const rect = e.target.getBoundingClientRect();
-      tooltip.style.left = (rect.left - 250) + 'px';
-      tooltip.style.top = (rect.bottom + 5) + 'px';
+      const tooltipWidth = 300; // Max width from CSS
+      const tooltipHeight = 200; // Estimated height
+      
+      // Position tooltip to the left of button, centered vertically
+      let left = rect.left - tooltipWidth - 10;
+      let top = rect.top - (tooltipHeight / 2) + (rect.height / 2);
+      
+      // Ensure tooltip stays within viewport
+      if (left < 10) left = 10;
+      if (top < 10) top = rect.bottom + 10;
+      if (top + tooltipHeight > window.innerHeight - 10) {
+        top = window.innerHeight - tooltipHeight - 10;
+      }
+      
+      tooltip.style.left = left + 'px';
+      tooltip.style.top = top + 'px';
     });
     
     // Handle remove button clicks
     document.addEventListener('click', (e) => {
-      if (e.target.classList.contains('remove-btn')) {
+      if (e.target.classList.contains('remove-btn-small')) {
         const index = parseInt(e.target.getAttribute('data-index'));
         this.removeWatch(index);
       }
     });
     
+    // Fee info button tooltip
+    document.getElementById('feeInfoBtn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const tooltip = document.getElementById('feeTooltip');
+      tooltip.classList.toggle('show');
+      
+      // Position tooltip dynamically
+      const buttonRect = e.target.getBoundingClientRect();
+      const tooltipRect = tooltip.getBoundingClientRect();
+      
+      let left = buttonRect.left - tooltipRect.width + buttonRect.width;
+      let top = buttonRect.top + (buttonRect.height / 2) - (tooltipRect.height / 2);
+      
+      // Ensure tooltip stays within viewport
+      if (left < 0) left = 5;
+      if (top < 0) top = 5;
+      if (left + tooltipRect.width > window.innerWidth) {
+        left = window.innerWidth - tooltipRect.width - 5;
+      }
+      if (top + tooltipRect.height > window.innerHeight) {
+        top = window.innerHeight - tooltipRect.height - 5;
+      }
+      
+      tooltip.style.left = left + 'px';
+      tooltip.style.top = top + 'px';
+    });
+    
     // Close tooltip when clicking elsewhere
     document.addEventListener('click', (e) => {
-      if (!e.target.closest('#riskInfoBtn') && !e.target.closest('#riskTooltip')) {
+      if (!e.target.closest('#riskInfoBtn') && !e.target.closest('#riskTooltip') && 
+          !e.target.closest('#feeInfoBtn') && !e.target.closest('#feeTooltip')) {
         document.getElementById('riskTooltip').classList.remove('show');
+        document.getElementById('feeTooltip').classList.remove('show');
       }
     });
   }
@@ -139,13 +182,45 @@ class BitcoinMini {
       const response = await fetch('https://mempool.space/api/v1/fees/recommended');
       const data = await response.json();
       if (data) {
-        document.getElementById('fee_fast').textContent = data.fastestFee || '—';
-        document.getElementById('fee_hour').textContent = data.hourFee || '—';
-        document.getElementById('fee_econ').textContent = data.economyFee || '—';
+        document.getElementById('fee_fast').textContent = data.fastestFee ? parseFloat(data.fastestFee).toFixed(1) : '—';
+        document.getElementById('fee_hour').textContent = data.hourFee ? parseFloat(data.hourFee).toFixed(1) : '—';
+        document.getElementById('fee_econ').textContent = data.economyFee ? parseFloat(data.economyFee).toFixed(1) : '—';
         document.getElementById('feeTime').textContent = new Date().toLocaleTimeString();
+        
+        // Categorize fees
+        this.categorizeFee('fee_fast', data.fastestFee);
+        this.categorizeFee('fee_hour', data.hourFee);
+        this.categorizeFee('fee_econ', data.economyFee);
       }
     } catch (error) {
       console.error('Fees error:', error);
+    }
+  }
+  
+  categorizeFee(elementId, fee) {
+    const categoryElement = document.getElementById(elementId + '_category');
+    if (!fee || fee === '—') {
+      categoryElement.textContent = '—';
+      categoryElement.className = 'fee-category';
+      return;
+    }
+    
+    const feeValue = parseFloat(fee);
+    if (feeValue < 5) {
+      categoryElement.textContent = 'Very Low';
+      categoryElement.className = 'fee-category fee-very-low';
+    } else if (feeValue < 10) {
+      categoryElement.textContent = 'Low';
+      categoryElement.className = 'fee-category fee-low';
+    } else if (feeValue <= 50) {
+      categoryElement.textContent = 'Medium';
+      categoryElement.className = 'fee-category fee-medium';
+    } else if (feeValue <= 100) {
+      categoryElement.textContent = 'High';
+      categoryElement.className = 'fee-category fee-high';
+    } else {
+      categoryElement.textContent = 'Very High';
+      categoryElement.className = 'fee-category fee-very-high';
     }
   }
   
@@ -298,7 +373,7 @@ class BitcoinMini {
         <td class="muted">${item.address.slice(0, 8)}...</td>
         <td>${balance}</td>
         <td class="${risk.class}">${risk.text}</td>
-        <td style="text-align: right;"><button class="remove-btn" data-index="${index}">Remove</button></td>
+        <td style="text-align: right;"><div style="display: flex; justify-content: flex-end;"><button class="remove-btn-small" data-index="${index}" title="Remove address"></button></div></td>
       `;
       
       tbody.appendChild(row);
