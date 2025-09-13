@@ -7,6 +7,7 @@ class BitcoinMini {
   }
   
   async init() {
+    await this.initAuth();
     await this.loadData();
     this.bindEvents();
     await this.refreshPrice();
@@ -125,6 +126,70 @@ class BitcoinMini {
           !e.target.closest('#feeInfoBtn') && !e.target.closest('#feeTooltip')) {
         document.getElementById('riskTooltip').classList.remove('show');
         document.getElementById('feeTooltip').classList.remove('show');
+      }
+    });
+
+    // Authentication event listeners
+    // PIN setup
+    document.getElementById('pinSetupInput').addEventListener('input', (e) => {
+      this.updatePinDots('pinSetupInput', 'pinDot');
+    });
+
+    document.getElementById('setupPinBtn').addEventListener('click', () => {
+      const pin = document.getElementById('pinSetupInput').value;
+      this.setupPin(pin);
+    });
+
+    // PIN entry
+    document.getElementById('pinInput').addEventListener('input', (e) => {
+      this.updatePinDots('pinInput', 'pinDot');
+    });
+
+    document.getElementById('unlockBtn').addEventListener('click', async () => {
+      const pin = document.getElementById('pinInput').value;
+      const success = await this.unlockPin(pin);
+      if (!success) {
+        alert('Invalid PIN. Please try again.');
+        document.getElementById('pinInput').value = '';
+        this.updatePinDots('pinInput', 'pinDot');
+      }
+    });
+
+    // Reset button
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      this.resetAllData();
+    });
+
+    // Enter key support for PIN inputs
+    document.getElementById('pinSetupInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && document.getElementById('setupPinBtn').disabled === false) {
+        this.setupPin(document.getElementById('pinSetupInput').value);
+      }
+    });
+
+    document.getElementById('pinInput').addEventListener('keypress', async (e) => {
+      if (e.key === 'Enter' && document.getElementById('unlockBtn').disabled === false) {
+        const pin = document.getElementById('pinInput').value;
+        const success = await this.unlockPin(pin);
+        if (!success) {
+          alert('Invalid PIN. Please try again.');
+          document.getElementById('pinInput').value = '';
+          this.updatePinDots('pinInput', 'pinDot');
+        }
+      }
+    });
+
+    // Lock/Unlock button
+    document.getElementById('lockBtn').addEventListener('click', async () => {
+      const authData = await chrome.storage.local.get(['isLocked']);
+      if (authData.isLocked) {
+        // Show PIN entry to unlock
+        this.showPinEntry();
+      } else {
+        // Lock the address section
+        await chrome.storage.local.set({ isLocked: true });
+        this.hideAddressSection();
+        this.showPinEntry();
       }
     });
   }
@@ -448,6 +513,128 @@ class BitcoinMini {
     document.querySelectorAll('.unit-btn').forEach(btn => btn.classList.remove('active'));
     const activeBtn = document.getElementById(`toggle${this.unit}Btn`);
     if (activeBtn) activeBtn.classList.add('active');
+  }
+
+  // Authentication methods
+  async initAuth() {
+    const authData = await chrome.storage.local.get(['pin', 'isSetup', 'isLocked']);
+    
+    if (!authData.isSetup) {
+      this.showPinSetup();
+      this.hideAddressSection();
+    } else if (authData.isLocked) {
+      this.showPinEntry();
+      this.hideAddressSection();
+    } else {
+      this.showMainContent();
+      this.showAddressSection();
+    }
+  }
+
+  showPinSetup() {
+    document.getElementById('authScreen').classList.add('show');
+    document.getElementById('pinSetup').style.display = 'block';
+    document.getElementById('pinEntry').style.display = 'none';
+    document.getElementById('mainContent').classList.remove('hidden');
+  }
+
+  showPinEntry() {
+    document.getElementById('authScreen').classList.add('show');
+    document.getElementById('pinSetup').style.display = 'none';
+    // PIN entry is now within the locked section, so just show main content
+    document.getElementById('mainContent').classList.remove('hidden');
+  }
+
+  showMainContent() {
+    document.getElementById('authScreen').classList.remove('show');
+    document.getElementById('mainContent').classList.remove('hidden');
+  }
+
+  showAddressSection() {
+    document.getElementById('addressSection').style.display = 'block';
+    document.getElementById('lockedSection').style.display = 'none';
+    document.getElementById('pinEntry').style.display = 'none'; // Hide PIN entry when unlocked
+    document.getElementById('lockBtn').textContent = '🔒 Lock';
+    document.getElementById('lockBtn').style.background = '#ee5253';
+  }
+
+  hideAddressSection() {
+    document.getElementById('addressSection').style.display = 'none';
+    document.getElementById('lockedSection').style.display = 'block';
+    document.getElementById('pinEntry').style.display = 'block'; // Show PIN entry when locked
+    document.getElementById('lockBtn').textContent = '🔓 Unlock';
+    document.getElementById('lockBtn').style.background = '#1dd1a1';
+    
+    // Clear PIN input when locking
+    document.getElementById('pinInput').value = '';
+    this.updatePinDots('pinInput', 'pinDot');
+  }
+
+  async setupPin(pin) {
+    const hashedPin = await this.hashPin(pin);
+    await chrome.storage.local.set({
+      pin: hashedPin,
+      isSetup: true,
+      isLocked: false
+    });
+    this.showMainContent();
+    this.showAddressSection();
+    this.loadData();
+  }
+
+  async unlockPin(pin) {
+    const authData = await chrome.storage.local.get(['pin']);
+    const hashedPin = await this.hashPin(pin);
+    
+    if (hashedPin === authData.pin) {
+      await chrome.storage.local.set({ isLocked: false });
+      this.showMainContent();
+      this.showAddressSection();
+      this.loadData();
+      
+      // Clear PIN input after successful unlock
+      document.getElementById('pinInput').value = '';
+      this.updatePinDots('pinInput', 'pinDot');
+      
+      return true;
+    }
+    return false;
+  }
+
+  async resetAllData() {
+    if (confirm('⚠️ WARNING: This will permanently delete ALL your Bitcoin addresses, balances, and data. This action cannot be undone. Are you absolutely sure?')) {
+      await chrome.storage.local.clear();
+      this.watchlist = [];
+      this.showPinSetup();
+    }
+  }
+
+  async hashPin(pin) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(pin);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  updatePinDots(inputId, dotPrefix) {
+    const input = document.getElementById(inputId);
+    const value = input.value;
+    
+    for (let i = 1; i <= 4; i++) {
+      const dot = document.getElementById(dotPrefix + i);
+      if (i <= value.length) {
+        dot.classList.add('filled');
+      } else {
+        dot.classList.remove('filled');
+      }
+    }
+    
+    // Enable/disable button based on PIN length
+    const button = inputId === 'pinSetupInput' ? 
+      document.getElementById('setupPinBtn') : 
+      document.getElementById('unlockBtn');
+    button.disabled = value.length !== 4;
   }
 }
 

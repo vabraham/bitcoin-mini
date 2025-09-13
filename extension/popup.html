@@ -5,7 +5,7 @@
   <title>Bitcoin Mini</title>
   <style>
     body { margin: 0; font-family: system-ui; background: #0b1220; color: #e8eef7; width: 440px; }
-    .card { background: #121a2b; border-radius: 8px; padding: 12px; margin: 8px 0; }
+    .card { background: #121a2b; border-radius: 8px; padding: 12px; margin: 4px 0; }
     h1 { margin: 0 0 8px; color: #f2a900; font-size: 16px; }
     input, button { padding: 8px; border-radius: 4px; border: 1px solid #333; }
     input { 
@@ -151,13 +151,149 @@
       background: #f2a900;
       color: #000;
     }
+    
+    /* Authentication styling */
+    .auth-screen {
+      display: none;
+      text-align: center;
+      padding: 20px;
+    }
+    
+    .auth-screen.show {
+      display: block;
+    }
+    
+    .pin-input {
+      font-size: 24px;
+      letter-spacing: 8px;
+      text-align: center;
+      width: 120px;
+      margin: 10px auto;
+      background: #0b1220;
+      color: #e8eef7;
+      border: 2px solid #333;
+      border-radius: 6px;
+      padding: 10px;
+    }
+    
+    .pin-input:focus {
+      border-color: #f2a900;
+      outline: none;
+    }
+    
+    .pin-dots {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 10px 0;
+    }
+    
+    .pin-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #333;
+      transition: background 0.2s;
+    }
+    
+    .pin-dot.filled {
+      background: #f2a900;
+    }
+    
+    .auth-warning {
+      background: #2d1b1b;
+      border: 1px solid #ee5253;
+      border-radius: 6px;
+      padding: 12px;
+      margin: 15px 0;
+      font-size: 11px;
+      line-height: 1.4;
+    }
+    
+    .auth-warning strong {
+      color: #ee5253;
+    }
+    
+    .reset-btn {
+      background: #ee5253;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      margin-top: 10px;
+    }
+    
+    .reset-btn:hover {
+      background: #c44569;
+    }
+    
+    .reset-btn:disabled {
+      background: #666;
+      cursor: not-allowed;
+    }
+    
+    .main-content {
+      display: block;
+    }
+    
+    .main-content.hidden {
+      display: none;
+    }
+    
+    /* Bottom PIN entry styling */
+    #pinEntry .pin-input {
+      font-size: 18px;
+      letter-spacing: 4px;
+      width: 90px;
+      margin: 6px auto;
+    }
+    
+    #pinEntry .pin-dots {
+      margin: 6px 0;
+    }
+    
+    #pinEntry .auth-warning {
+      font-size: 10px;
+      line-height: 1.3;
+    }
+    
+    #pinEntry h4 {
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
   <div style="padding: 12px;">
     <h1>₿ Bitcoin Mini</h1>
     
-    <!-- Price -->
+    <!-- Authentication Screen -->
+    <div id="authScreen" class="auth-screen">
+      <div id="pinSetup" style="display: none;">
+        <h3>Set Up PIN</h3>
+        <p>Create a 4-digit PIN to protect your Bitcoin addresses and balances.</p>
+        
+        <div class="auth-warning">
+          <strong>⚠️ IMPORTANT WARNING:</strong><br>
+          There is <strong>NO WAY to recover a forgotten PIN</strong>. If you forget your PIN, the only option is to delete all your data and start over. Choose a PIN you will remember!
+        </div>
+        
+        <input type="password" id="pinSetupInput" class="pin-input" maxlength="4" placeholder="0000">
+        <div class="pin-dots">
+          <div class="pin-dot" id="pinDot1"></div>
+          <div class="pin-dot" id="pinDot2"></div>
+          <div class="pin-dot" id="pinDot3"></div>
+          <div class="pin-dot" id="pinDot4"></div>
+        </div>
+        <button id="setupPinBtn" disabled>Set PIN</button>
+      </div>
+      
+    </div>
+    
+    <!-- Main Content -->
+    <div id="mainContent" class="main-content">
+      <!-- Price -->
     <div class="card">
       <div class="row">
         <strong>BTC Price</strong>
@@ -203,19 +339,68 @@
     </div>
     
     <!-- Add Address -->
-    <div class="card">
-      <strong>Add Address</strong>
-      <input id="addr" type="text" placeholder="Bitcoin address" autocomplete="off">
-      <input id="label" type="text" placeholder="Label (optional)" autocomplete="off">
-      <button id="addWatchBtn">Add</button>
-      <div id="addrErr" class="warn"></div>
+    <div class="card" style="padding: 16px;">
+      <div class="row">
+        <strong>Add Address</strong>
+        <button id="lockBtn" style="margin-left: auto; background: #ee5253; color: white; border: none; padding: 4px 8px; border-radius: 3px; font-size: 11px; cursor: pointer;">🔒 Lock</button>
+      </div>
+      <!-- Protected Address Section -->
+      <div id="addressSection">
+        <input id="addr" type="text" placeholder="Bitcoin address" autocomplete="off">
+        <input id="label" type="text" placeholder="Label (optional)" autocomplete="off">
+        <button id="addWatchBtn">Add</button>
+        <div id="addrErr" class="warn"></div>
+        
+        <table style="margin-top: 8px;">
+          <thead>
+            <tr><th>Label</th><th>Address</th><th>Balance</th><th>Risk <span id="riskInfoBtn" class="info-btn" title="Click for risk level explanation">ⓘ</span></th><th style="text-align: right;">Action</th></tr>
+          </thead>
+          <tbody id="watchRows"></tbody>
+        </table>
+        
+        <!-- Total section - now protected by PIN -->
+        <div class="row">
+          <span class="muted"><span class="total-label">Total:</span> <span id="totalValue" class="total-value">0 BTC</span></span>
+          <div style="display: flex; gap: 4px; margin-left: auto;">
+            <button id="toggleBtcBtn" class="unit-btn active">BTC</button>
+            <button id="toggleSatsBtn" class="unit-btn">SATS</button>
+            <button id="toggleUsdBtn" class="unit-btn">USD</button>
+          </div>
+        </div>
+      </div>
       
-      <table style="margin-top: 8px;">
-        <thead>
-          <tr><th>Label</th><th>Address</th><th>Balance</th><th>Risk <span id="riskInfoBtn" class="info-btn" title="Click for risk level explanation">ⓘ</span></th><th style="text-align: right;">Action</th></tr>
-        </thead>
-        <tbody id="watchRows"></tbody>
-      </table>
+      <!-- Locked State Display -->
+      <div id="lockedSection" style="display: none; text-align: center; padding: 20px; color: #8aa0b6;">
+        <p>🔒 Address data is locked</p>
+        <p style="font-size: 12px;">Enter your PIN to view and manage your Bitcoin addresses</p>
+        
+        <!-- PIN Entry within Add Address card -->
+        <div id="pinEntry" style="display: none; margin-top: 16px;">
+          <div style="display: flex; gap: 16px; align-items: center;">
+            <!-- Left Column: PIN Entry -->
+            <div style="flex: 1; text-align: center;">
+              <h4 style="margin: 0 0 8px 0;">Enter PIN</h4>
+              <input type="password" id="pinInput" class="pin-input" maxlength="4" placeholder="0000">
+              <div class="pin-dots">
+                <div class="pin-dot" id="pinDot1"></div>
+                <div class="pin-dot" id="pinDot2"></div>
+                <div class="pin-dot" id="pinDot3"></div>
+                <div class="pin-dot" id="pinDot4"></div>
+              </div>
+              <button id="unlockBtn" disabled>Unlock</button>
+            </div>
+            
+            <!-- Right Column: Warning & Reset -->
+            <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; text-align: center;">
+              <div class="auth-warning" style="margin: 0 0 8px 0;">
+                <strong>Forgot your PIN?</strong><br>
+                There is no way to recover it. The only option is to delete all data and start over.
+              </div>
+              <button id="resetBtn" class="reset-btn" style="width: 100%;">Reset All Data</button>
+            </div>
+          </div>
+        </div>
+      </div>
       
       <!-- Risk explanation tooltip -->
       <div id="riskTooltip" class="tooltip">
@@ -229,16 +414,8 @@
         </ul>
         <p><em>Analysis checks up to 5 most recent UTXOs for quantum vulnerability patterns.</em></p>
       </div>
-      
-      <div class="row">
-        <span class="muted"><span class="total-label">Total:</span> <span id="totalValue" class="total-value">0 BTC</span></span>
-        <div style="display: flex; gap: 4px; margin-left: auto;">
-          <button id="toggleBtcBtn" class="unit-btn active">BTC</button>
-          <button id="toggleSatsBtn" class="unit-btn">SATS</button>
-          <button id="toggleUsdBtn" class="unit-btn">USD</button>
-        </div>
-      </div>
     </div>
+    </div> <!-- End main content -->
     
   </div>
   
