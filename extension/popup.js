@@ -1,4 +1,9 @@
 // Bitcoin Mini Extension - Simple & Clean
+// Browser API polyfill for cross-browser compatibility
+if (typeof browser === "undefined") {
+  var browser = chrome;
+}
+
 class BitcoinMini {
   constructor() {
     this.unit = 'BTC';
@@ -15,10 +20,10 @@ class BitcoinMini {
     
     // Handle "On Extension Open" timeout BEFORE setting UI state
     if (this.vaultTimeout === 'extension_open') {
-      const authData = await chrome.storage.local.get(['isLocked', 'pin']);
+      const authData = await browser.storage.local.get(['isLocked', 'pin']);
       if (!authData.isLocked && authData.pin) {
         // Lock the vault immediately before showing UI
-        await chrome.storage.local.set({ isLocked: true });
+        await browser.storage.local.set({ isLocked: true });
       }
     }
     
@@ -38,14 +43,14 @@ class BitcoinMini {
   
   // Storage
   async loadData() {
-    const result = await chrome.storage.local.get(['watchlist', 'unit', 'vaultTimeout']);
+    const result = await browser.storage.local.get(['watchlist', 'unit', 'vaultTimeout']);
     this.watchlist = result.watchlist || [];
     this.unit = result.unit || 'BTC';
     this.vaultTimeout = result.vaultTimeout || 'never';
   }
   
   async saveData() {
-    await chrome.storage.local.set({
+    await browser.storage.local.set({
       watchlist: this.watchlist,
       unit: this.unit,
       vaultTimeout: this.vaultTimeout
@@ -217,7 +222,7 @@ class BitcoinMini {
 
     // Lock/Unlock button
     document.getElementById('lockBtn').addEventListener('click', async () => {
-      const authData = await chrome.storage.local.get(['isLocked', 'pin']);
+      const authData = await browser.storage.local.get(['isLocked', 'pin']);
       if (authData.isLocked) {
         // Show PIN entry to unlock
         this.showPinEntry();
@@ -232,7 +237,7 @@ class BitcoinMini {
           this.showPinSetupModal();
         } else {
           // PIN already set up, just lock
-          await chrome.storage.local.set({ isLocked: true });
+          await browser.storage.local.set({ isLocked: true });
           this.hideAddressSection();
         }
       }
@@ -255,7 +260,7 @@ class BitcoinMini {
       const pin = document.getElementById('pinSetupInput').value;
       if (pin && pin.length >= 4 && pin.length <= 6 && /^\d+$/.test(pin)) {
         await this.setupPin(pin);
-        await chrome.storage.local.set({ isLocked: true });
+        await browser.storage.local.set({ isLocked: true });
         this.hideAddressSection();
         this.hidePinSetupModal();
       }
@@ -271,7 +276,7 @@ class BitcoinMini {
         const pin = document.getElementById('pinSetupInput').value;
         if (pin && pin.length >= 4 && pin.length <= 6 && /^\d+$/.test(pin)) {
           await this.setupPin(pin);
-          await chrome.storage.local.set({ isLocked: true });
+          await browser.storage.local.set({ isLocked: true });
           this.hideAddressSection();
           this.hidePinSetupModal();
         }
@@ -324,8 +329,8 @@ class BitcoinMini {
       this.hideChangePinModal();
     });
 
-    document.getElementById('confirmChangePinBtn').addEventListener('click', () => {
-      this.changePin();
+    document.getElementById('confirmChangePinBtn').addEventListener('click', async () => {
+      await this.changePin();
     });
 
     // Current PIN input
@@ -340,6 +345,13 @@ class BitcoinMini {
       this.updateChangePinButton();
     });
 
+    // Current PIN keypress support
+    document.getElementById('currentPinInput').addEventListener('keypress', async (e) => {
+      if (e.key === 'Enter' && document.getElementById('confirmChangePinBtn').disabled === false) {
+        await this.changePin();
+      }
+    });
+
     // New PIN input
     document.getElementById('newPinInput').addEventListener('input', (e) => {
       // Allow any input during typing, but filter to numbers only
@@ -350,6 +362,13 @@ class BitcoinMini {
       
       this.updatePinDots('newPinInput', 'newPinDot');
       this.updateChangePinButton();
+    });
+
+    // New PIN keypress support
+    document.getElementById('newPinInput').addEventListener('keypress', async (e) => {
+      if (e.key === 'Enter' && document.getElementById('confirmChangePinBtn').disabled === false) {
+        await this.changePin();
+      }
     });
   }
   
@@ -676,7 +695,7 @@ class BitcoinMini {
 
   // Address section initialization
   async initAddressSection() {
-    const authData = await chrome.storage.local.get(['isLocked', 'pin']);
+    const authData = await browser.storage.local.get(['isLocked', 'pin']);
     
     // If vault is locked, always show lock screen
     if (authData.isLocked) {
@@ -808,39 +827,77 @@ class BitcoinMini {
     const newPin = document.getElementById('newPinInput').value;
     
     // Verify current PIN
-    const authData = await chrome.storage.local.get(['pin']);
+    const authData = await browser.storage.local.get(['pin']);
     const hashedCurrentPin = await this.hashPin(currentPin);
     
     if (hashedCurrentPin !== authData.pin) {
-      this.showNotification('Current PIN is incorrect. Please try again.', 'error');
-      document.getElementById('currentPinInput').value = '';
+      this.showNotification('❌ Current PIN is incorrect. Please try again.', 'error');
+      
+      // Add visual feedback to current PIN field
+      const currentPinInput = document.getElementById('currentPinInput');
+      currentPinInput.style.borderColor = '#dc2626';
+      currentPinInput.style.backgroundColor = '#2d1b1b';
+      
+      // Clear and focus current PIN field
+      currentPinInput.value = '';
       this.updatePinDots('currentPinInput', 'currentPinDot');
       this.updateChangePinButton();
+      
+      // Reset visual feedback after 2 seconds
+      setTimeout(() => {
+        currentPinInput.style.borderColor = '#333';
+        currentPinInput.style.backgroundColor = '#0b1220';
+      }, 2000);
+      
+      // Focus the current PIN field
+      currentPinInput.focus();
       return;
     }
     
     // Check if new PIN is different from current PIN
     if (currentPin === newPin) {
-      this.showNotification('New PIN must be different from current PIN.', 'error');
-      document.getElementById('newPinInput').value = '';
+      this.showNotification('❌ New PIN must be different from current PIN.', 'error');
+      
+      // Add visual feedback to new PIN field
+      const newPinInput = document.getElementById('newPinInput');
+      newPinInput.style.borderColor = '#dc2626';
+      newPinInput.style.backgroundColor = '#2d1b1b';
+      
+      // Clear new PIN field
+      newPinInput.value = '';
       this.updatePinDots('newPinInput', 'newPinDot');
       this.updateChangePinButton();
+      
+      // Reset visual feedback after 2 seconds
+      setTimeout(() => {
+        newPinInput.style.borderColor = '#333';
+        newPinInput.style.backgroundColor = '#0b1220';
+      }, 2000);
+      
+      // Focus the new PIN field
+      newPinInput.focus();
       return;
     }
     
     // Update PIN
     const hashedNewPin = await this.hashPin(newPin);
-    await chrome.storage.local.set({ pin: hashedNewPin });
+    await browser.storage.local.set({ pin: hashedNewPin });
     
-    this.showNotification('PIN changed successfully!', 'success');
+    this.showNotification('✅ PIN changed successfully!', 'success');
     this.hideChangePinModal();
   }
 
   // In-app notification system
   showNotification(message, type = 'success') {
+    console.log('Showing notification:', message, type); // Debug log
     const notification = document.getElementById('notification');
     const icon = document.getElementById('notificationIcon');
     const text = document.getElementById('notificationText');
+    
+    if (!notification || !icon || !text) {
+      console.error('Notification elements not found');
+      return;
+    }
     
     // Set message and icon
     text.textContent = message;
@@ -871,7 +928,7 @@ class BitcoinMini {
 
   async setupPin(pin) {
     const hashedPin = await this.hashPin(pin);
-    await chrome.storage.local.set({
+    await browser.storage.local.set({
       pin: hashedPin,
       isSetup: true,
       isLocked: false,
@@ -886,11 +943,11 @@ class BitcoinMini {
   }
 
   async unlockPin(pin) {
-    const authData = await chrome.storage.local.get(['pin']);
+    const authData = await browser.storage.local.get(['pin']);
     const hashedPin = await this.hashPin(pin);
     
     if (hashedPin === authData.pin) {
-      await chrome.storage.local.set({ isLocked: false });
+      await browser.storage.local.set({ isLocked: false });
       this.showAddressSection();
       
       // Refresh price data to ensure USD values work correctly
@@ -907,7 +964,7 @@ class BitcoinMini {
   }
 
   async resetAllData() {
-    await chrome.storage.local.clear();
+    await browser.storage.local.clear();
     this.watchlist = [];
     this.showAddressSection();
     
@@ -960,7 +1017,7 @@ class BitcoinMini {
   }
 
   // Vault timeout functionality
-  startVaultTimeout() {
+  async startVaultTimeout() {
     // Clear existing timeout
     if (this.timeoutId) {
       clearTimeout(this.timeoutId);
@@ -972,42 +1029,40 @@ class BitcoinMini {
       return;
     }
 
-    const authData = chrome.storage.local.get(['isLocked']);
-    authData.then(data => {
-      if (data.isLocked) {
-        return; // Don't start timeout if already locked
-      }
+    const authData = await browser.storage.local.get(['isLocked']);
+    if (authData.isLocked) {
+      return; // Don't start timeout if already locked
+    }
 
-      // Handle special timeout types
-      if (this.vaultTimeout === 'browser_restart') {
-        // Check if this is a fresh browser session
-        this.checkBrowserRestart();
-        return;
-      }
+    // Handle special timeout types
+    if (this.vaultTimeout === 'browser_restart') {
+      // Check if this is a fresh browser session
+      this.checkBrowserRestart();
+      return;
+    }
 
-      if (this.vaultTimeout === 'system_lock') {
-        // Listen for system lock events (limited in browser extensions)
-        this.setupSystemLockListener();
-        return;
-      }
+    if (this.vaultTimeout === 'system_lock') {
+      // Listen for system lock events (limited in browser extensions)
+      this.setupSystemLockListener();
+      return;
+    }
 
-      // Handle time-based timeouts
-      const timeoutMinutes = parseInt(this.vaultTimeout);
-      if (timeoutMinutes > 0) {
-        const timeoutMs = timeoutMinutes * 60 * 1000; // Convert to milliseconds
-        this.timeoutId = setTimeout(() => {
-          this.autoLockVault();
-        }, timeoutMs);
-      }
-    });
+    // Handle time-based timeouts
+    const timeoutMinutes = parseInt(this.vaultTimeout);
+    if (timeoutMinutes > 0) {
+      const timeoutMs = timeoutMinutes * 60 * 1000; // Convert to milliseconds
+      this.timeoutId = setTimeout(() => {
+        this.autoLockVault();
+      }, timeoutMs);
+    }
   }
 
   async autoLockVault() {
-    const authData = await chrome.storage.local.get(['isLocked', 'pin']);
+    const authData = await browser.storage.local.get(['isLocked', 'pin']);
     
     // Only auto-lock if vault is unlocked and PIN is set up
     if (!authData.isLocked && authData.pin) {
-      await chrome.storage.local.set({ isLocked: true });
+      await browser.storage.local.set({ isLocked: true });
       this.hideAddressSection();
     }
   }
@@ -1020,12 +1075,12 @@ class BitcoinMini {
 
   // Check if browser was restarted
   async checkBrowserRestart() {
-    const sessionData = await chrome.storage.local.get(['lastSessionId']);
+    const sessionData = await browser.storage.local.get(['lastSessionId']);
     const currentSessionId = Date.now().toString();
     
     if (!sessionData.lastSessionId) {
       // First time setup
-      await chrome.storage.local.set({ lastSessionId: currentSessionId });
+      await browser.storage.local.set({ lastSessionId: currentSessionId });
       return;
     }
     
@@ -1036,7 +1091,7 @@ class BitcoinMini {
     }
     
     // Update session ID
-    await chrome.storage.local.set({ lastSessionId: currentSessionId });
+    await browser.storage.local.set({ lastSessionId: currentSessionId });
   }
 
   // Setup system lock listener (limited functionality in browser extensions)

@@ -2,7 +2,9 @@
   "manifest_version": 3,
   "name": "Bitcoin Mini",
   "version": "1.0.0",
-  "description": "Simple Bitcoin price, fees, and address tracking",
+  "description": "Simple Bitcoin price, fees, and address tracking with secure vault functionality",
+  "author": "Bitcoin Mini Team",
+  "homepage_url": "https://github.com/bitcoin-mini/extension",
   
   "permissions": ["storage"],
   
@@ -26,6 +28,18 @@
       "32": "icon32.png",
       "48": "icon48.png",
       "128": "icon128.png"
+    },
+    "default_title": "Bitcoin Mini - Price & Address Tracker"
+  },
+  
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "bitcoin-mini@extension.com",
+      "strict_min_version": "109.0"
     }
+  },
+  
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';"
   }
 }
