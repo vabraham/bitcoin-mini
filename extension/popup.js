@@ -3,51 +3,95 @@ class BitcoinMini {
   constructor() {
     this.unit = 'BTC';
     this.watchlist = [];
+    this.vaultTimeout = 'never'; // Default for existing users, will be set to 'extension_open' when PIN is first created
+    this.lastActivity = Date.now();
+    this.timeoutId = null;
     this.init();
   }
   
   async init() {
-    await this.initAuth();
+    // Load data first to get current vault timeout setting
     await this.loadData();
+    
+    // Handle "On Extension Open" timeout BEFORE setting UI state
+    if (this.vaultTimeout === 'extension_open') {
+      const authData = await chrome.storage.local.get(['isLocked', 'pin']);
+      if (!authData.isLocked && authData.pin) {
+        // Lock the vault immediately before showing UI
+        await chrome.storage.local.set({ isLocked: true });
+      }
+    }
+    
+    // Set initial address section state based on lock status
+    await this.initAddressSection();
+    
     this.bindEvents();
     await this.refreshPrice();
     await this.refreshFees();
     this.renderWatchlist();
     
+    // Start timeout for other options (not needed for extension_open)
+    if (this.vaultTimeout !== 'extension_open') {
+      this.startVaultTimeout();
+    }
   }
   
   // Storage
   async loadData() {
-    const result = await chrome.storage.local.get(['watchlist', 'unit']);
+    const result = await chrome.storage.local.get(['watchlist', 'unit', 'vaultTimeout']);
     this.watchlist = result.watchlist || [];
     this.unit = result.unit || 'BTC';
+    this.vaultTimeout = result.vaultTimeout || 'never';
   }
   
   async saveData() {
     await chrome.storage.local.set({
       watchlist: this.watchlist,
-      unit: this.unit
+      unit: this.unit,
+      vaultTimeout: this.vaultTimeout
     });
   }
   
   // Events
   bindEvents() {
-    document.getElementById('refreshPriceBtn').onclick = () => this.refreshPrice();
-    document.getElementById('refreshFeesBtn').onclick = () => this.refreshFees();
-    document.getElementById('addWatchBtn').onclick = () => this.addWatch();
-    document.getElementById('toggleBtcBtn').onclick = () => this.setUnit('BTC');
-    document.getElementById('toggleSatsBtn').onclick = () => this.setUnit('SATS');
-    document.getElementById('toggleUsdBtn').onclick = () => this.setUnit('USD');
+    document.getElementById('refreshPriceBtn').onclick = () => {
+      this.trackActivity();
+      this.refreshPrice();
+    };
+    document.getElementById('refreshFeesBtn').onclick = () => {
+      this.trackActivity();
+      this.refreshFees();
+    };
+    document.getElementById('addWatchBtn').onclick = () => {
+      this.trackActivity();
+      this.addWatch();
+    };
+    document.getElementById('toggleBtcBtn').onclick = () => {
+      this.trackActivity();
+      this.setUnit('BTC');
+    };
+    document.getElementById('toggleSatsBtn').onclick = () => {
+      this.trackActivity();
+      this.setUnit('SATS');
+    };
+    document.getElementById('toggleUsdBtn').onclick = () => {
+      this.trackActivity();
+      this.setUnit('USD');
+    };
     
     // Input elements
     const addrInput = document.getElementById('addr');
     const labelInput = document.getElementById('label');
     
+    // Track activity on input interactions
+    addrInput.addEventListener('input', () => this.trackActivity());
+    labelInput.addEventListener('input', () => this.trackActivity());
     
     // Enter key support
     addrInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
+        this.trackActivity();
         this.addWatch();
       }
     });
@@ -55,6 +99,7 @@ class BitcoinMini {
     labelInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
+        this.trackActivity();
         this.addWatch();
       }
     });
@@ -129,19 +174,16 @@ class BitcoinMini {
       }
     });
 
-    // Authentication event listeners
-    // PIN setup
-    document.getElementById('pinSetupInput').addEventListener('input', (e) => {
-      this.updatePinDots('pinSetupInput', 'pinDot');
-    });
-
-    document.getElementById('setupPinBtn').addEventListener('click', () => {
-      const pin = document.getElementById('pinSetupInput').value;
-      this.setupPin(pin);
-    });
-
-    // PIN entry
+    // PIN entry (only when locked)
     document.getElementById('pinInput').addEventListener('input', (e) => {
+      // Allow any input during typing, but filter to numbers only
+      let value = e.target.value;
+      // Remove non-numeric characters
+      value = value.replace(/\D/g, '');
+      // Limit to 6 characters
+      value = value.substring(0, 6);
+      e.target.value = value;
+      
       this.updatePinDots('pinInput', 'pinDot');
     });
 
@@ -149,7 +191,7 @@ class BitcoinMini {
       const pin = document.getElementById('pinInput').value;
       const success = await this.unlockPin(pin);
       if (!success) {
-        alert('Invalid PIN. Please try again.');
+        this.showNotification('Invalid PIN. Please try again.', 'error');
         document.getElementById('pinInput').value = '';
         this.updatePinDots('pinInput', 'pinDot');
       }
@@ -157,22 +199,16 @@ class BitcoinMini {
 
     // Reset button
     document.getElementById('resetBtn').addEventListener('click', () => {
-      this.resetAllData();
+      this.showResetConfirmModal();
     });
 
-    // Enter key support for PIN inputs
-    document.getElementById('pinSetupInput').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter' && document.getElementById('setupPinBtn').disabled === false) {
-        this.setupPin(document.getElementById('pinSetupInput').value);
-      }
-    });
-
+    // Enter key support for PIN input
     document.getElementById('pinInput').addEventListener('keypress', async (e) => {
       if (e.key === 'Enter' && document.getElementById('unlockBtn').disabled === false) {
         const pin = document.getElementById('pinInput').value;
         const success = await this.unlockPin(pin);
         if (!success) {
-          alert('Invalid PIN. Please try again.');
+          this.showNotification('Invalid PIN. Please try again.', 'error');
           document.getElementById('pinInput').value = '';
           this.updatePinDots('pinInput', 'pinDot');
         }
@@ -181,16 +217,139 @@ class BitcoinMini {
 
     // Lock/Unlock button
     document.getElementById('lockBtn').addEventListener('click', async () => {
-      const authData = await chrome.storage.local.get(['isLocked']);
+      const authData = await chrome.storage.local.get(['isLocked', 'pin']);
       if (authData.isLocked) {
         // Show PIN entry to unlock
         this.showPinEntry();
+        // Focus the PIN input when unlock button is clicked
+        setTimeout(() => {
+          document.getElementById('pinInput').focus();
+        }, 100);
       } else {
-        // Lock the address section
+        // Check if PIN is set up
+        if (!authData.pin) {
+          // First time locking - show PIN setup modal
+          this.showPinSetupModal();
+        } else {
+          // PIN already set up, just lock
+          await chrome.storage.local.set({ isLocked: true });
+          this.hideAddressSection();
+        }
+      }
+    });
+
+    // PIN Setup Modal event listeners
+    document.getElementById('pinSetupInput').addEventListener('input', (e) => {
+      // Allow any input during typing, but filter to numbers only
+      let value = e.target.value;
+      // Remove non-numeric characters
+      value = value.replace(/\D/g, '');
+      // Limit to 6 characters
+      value = value.substring(0, 6);
+      e.target.value = value;
+      
+      this.updatePinDots('pinSetupInput', 'pinSetupDot');
+    });
+    
+    document.getElementById('confirmPinSetupBtn').addEventListener('click', async () => {
+      const pin = document.getElementById('pinSetupInput').value;
+      if (pin && pin.length >= 4 && pin.length <= 6 && /^\d+$/.test(pin)) {
+        await this.setupPin(pin);
         await chrome.storage.local.set({ isLocked: true });
         this.hideAddressSection();
-        this.showPinEntry();
+        this.hidePinSetupModal();
       }
+    });
+
+    document.getElementById('cancelPinSetupBtn').addEventListener('click', () => {
+      this.hidePinSetupModal();
+    });
+
+    // Enter key support for PIN setup
+    document.getElementById('pinSetupInput').addEventListener('keypress', async (e) => {
+      if (e.key === 'Enter' && document.getElementById('confirmPinSetupBtn').disabled === false) {
+        const pin = document.getElementById('pinSetupInput').value;
+        if (pin && pin.length >= 4 && pin.length <= 6 && /^\d+$/.test(pin)) {
+          await this.setupPin(pin);
+          await chrome.storage.local.set({ isLocked: true });
+          this.hideAddressSection();
+          this.hidePinSetupModal();
+        }
+      }
+    });
+
+    // Reset confirmation modal event listeners
+    document.getElementById('resetConfirmInput').addEventListener('input', (e) => {
+      const value = e.target.value.toUpperCase();
+      const button = document.getElementById('confirmResetBtn');
+      button.disabled = value !== 'RESET';
+    });
+
+    document.getElementById('confirmResetBtn').addEventListener('click', async () => {
+      await this.resetAllData();
+      this.hideResetConfirmModal();
+    });
+
+    document.getElementById('cancelResetBtn').addEventListener('click', () => {
+      this.hideResetConfirmModal();
+    });
+
+    // Enter key support for reset confirmation
+    document.getElementById('resetConfirmInput').addEventListener('keypress', async (e) => {
+      if (e.key === 'Enter' && document.getElementById('confirmResetBtn').disabled === false) {
+        await this.resetAllData();
+        this.hideResetConfirmModal();
+      }
+    });
+
+    // Settings modal event listeners
+    document.getElementById('settingsBtn').addEventListener('click', () => {
+      this.showSettingsModal();
+    });
+
+    document.getElementById('cancelSettingsBtn').addEventListener('click', () => {
+      this.hideSettingsModal();
+    });
+
+    document.getElementById('saveSettingsBtn').addEventListener('click', () => {
+      this.saveSettings();
+    });
+
+    // Change PIN modal event listeners
+    document.getElementById('changePinBtn').addEventListener('click', () => {
+      this.showChangePinModal();
+    });
+
+    document.getElementById('cancelChangePinBtn').addEventListener('click', () => {
+      this.hideChangePinModal();
+    });
+
+    document.getElementById('confirmChangePinBtn').addEventListener('click', () => {
+      this.changePin();
+    });
+
+    // Current PIN input
+    document.getElementById('currentPinInput').addEventListener('input', (e) => {
+      // Allow any input during typing, but filter to numbers only
+      let value = e.target.value;
+      value = value.replace(/\D/g, '');
+      value = value.substring(0, 6);
+      e.target.value = value;
+      
+      this.updatePinDots('currentPinInput', 'currentPinDot');
+      this.updateChangePinButton();
+    });
+
+    // New PIN input
+    document.getElementById('newPinInput').addEventListener('input', (e) => {
+      // Allow any input during typing, but filter to numbers only
+      let value = e.target.value;
+      value = value.replace(/\D/g, '');
+      value = value.substring(0, 6);
+      e.target.value = value;
+      
+      this.updatePinDots('newPinInput', 'newPinDot');
+      this.updateChangePinButton();
     });
   }
   
@@ -515,59 +674,199 @@ class BitcoinMini {
     if (activeBtn) activeBtn.classList.add('active');
   }
 
-  // Authentication methods
-  async initAuth() {
-    const authData = await chrome.storage.local.get(['pin', 'isSetup', 'isLocked']);
+  // Address section initialization
+  async initAddressSection() {
+    const authData = await chrome.storage.local.get(['isLocked', 'pin']);
     
-    if (!authData.isSetup) {
-      this.showPinSetup();
+    // If vault is locked, always show lock screen
+    if (authData.isLocked) {
       this.hideAddressSection();
-    } else if (authData.isLocked) {
-      this.showPinEntry();
-      this.hideAddressSection();
-    } else {
-      this.showMainContent();
+    } 
+    // If vault is unlocked but PIN is set up, show address section
+    else if (authData.pin) {
       this.showAddressSection();
     }
-  }
-
-  showPinSetup() {
-    document.getElementById('authScreen').classList.add('show');
-    document.getElementById('pinSetup').style.display = 'block';
-    document.getElementById('pinEntry').style.display = 'none';
-    document.getElementById('mainContent').classList.remove('hidden');
-  }
-
-  showPinEntry() {
-    document.getElementById('authScreen').classList.add('show');
-    document.getElementById('pinSetup').style.display = 'none';
-    // PIN entry is now within the locked section, so just show main content
-    document.getElementById('mainContent').classList.remove('hidden');
-  }
-
-  showMainContent() {
-    document.getElementById('authScreen').classList.remove('show');
-    document.getElementById('mainContent').classList.remove('hidden');
+    // If no PIN is set up, show address section (no lock functionality yet)
+    else {
+      this.showAddressSection();
+    }
   }
 
   showAddressSection() {
     document.getElementById('addressSection').style.display = 'block';
     document.getElementById('lockedSection').style.display = 'none';
-    document.getElementById('pinEntry').style.display = 'none'; // Hide PIN entry when unlocked
     document.getElementById('lockBtn').textContent = '🔒 Lock';
-    document.getElementById('lockBtn').style.background = '#ee5253';
+    document.getElementById('lockBtn').style.background = '#c53030';
   }
 
   hideAddressSection() {
     document.getElementById('addressSection').style.display = 'none';
     document.getElementById('lockedSection').style.display = 'block';
-    document.getElementById('pinEntry').style.display = 'block'; // Show PIN entry when locked
     document.getElementById('lockBtn').textContent = '🔓 Unlock';
-    document.getElementById('lockBtn').style.background = '#1dd1a1';
+    document.getElementById('lockBtn').style.background = '#059669';
     
     // Clear PIN input when locking
     document.getElementById('pinInput').value = '';
     this.updatePinDots('pinInput', 'pinDot');
+  }
+
+  showPinEntry() {
+    // PIN entry is already visible in the locked section
+    // Update PIN dots for unlock screen
+    this.updatePinDotsForUnlock();
+  }
+
+  async updatePinDotsForUnlock() {
+    // Show all 6 dots for unlock screen since we can't determine exact PIN length from hash
+    const maxDots = 6;
+    for (let i = 1; i <= maxDots; i++) {
+      const dot = document.getElementById('pinDot' + i);
+      if (dot) {
+        dot.style.display = 'block';
+      }
+    }
+  }
+
+  showPinSetupModal() {
+    document.getElementById('pinSetupModal').style.display = 'flex';
+    document.getElementById('pinSetupInput').focus();
+  }
+
+  hidePinSetupModal() {
+    document.getElementById('pinSetupModal').style.display = 'none';
+    document.getElementById('pinSetupInput').value = '';
+    this.updatePinDots('pinSetupInput', 'pinSetupDot');
+  }
+
+  showResetConfirmModal() {
+    document.getElementById('resetConfirmModal').style.display = 'flex';
+    document.getElementById('resetConfirmInput').focus();
+  }
+
+  hideResetConfirmModal() {
+    document.getElementById('resetConfirmModal').style.display = 'none';
+    document.getElementById('resetConfirmInput').value = '';
+    document.getElementById('confirmResetBtn').disabled = true;
+  }
+
+  showSettingsModal() {
+    document.getElementById('settingsModal').style.display = 'flex';
+    this.loadSettingsUI();
+  }
+
+  hideSettingsModal() {
+    document.getElementById('settingsModal').style.display = 'none';
+  }
+
+  loadSettingsUI() {
+    // Set the current vault timeout setting
+    const dropdown = document.getElementById('vaultTimeoutSelect');
+    if (dropdown) {
+      dropdown.value = this.vaultTimeout;
+    }
+  }
+
+  async saveSettings() {
+    const dropdown = document.getElementById('vaultTimeoutSelect');
+    if (dropdown) {
+      this.vaultTimeout = dropdown.value;
+      await this.saveData();
+      this.hideSettingsModal();
+      this.startVaultTimeout();
+    }
+  }
+
+  showChangePinModal() {
+    document.getElementById('changePinModal').style.display = 'flex';
+    document.getElementById('currentPinInput').focus();
+  }
+
+  hideChangePinModal() {
+    document.getElementById('changePinModal').style.display = 'none';
+    document.getElementById('currentPinInput').value = '';
+    document.getElementById('newPinInput').value = '';
+    this.updatePinDots('currentPinInput', 'currentPinDot');
+    this.updatePinDots('newPinInput', 'newPinDot');
+    document.getElementById('confirmChangePinBtn').disabled = true;
+  }
+
+  updateChangePinButton() {
+    const currentPin = document.getElementById('currentPinInput').value;
+    const newPin = document.getElementById('newPinInput').value;
+    const button = document.getElementById('confirmChangePinBtn');
+    
+    if (button) {
+      // Enable button when both PINs are 4-6 characters and all digits
+      const currentValid = currentPin.length >= 4 && currentPin.length <= 6 && /^\d+$/.test(currentPin);
+      const newValid = newPin.length >= 4 && newPin.length <= 6 && /^\d+$/.test(newPin);
+      button.disabled = !(currentValid && newValid);
+    }
+  }
+
+  async changePin() {
+    const currentPin = document.getElementById('currentPinInput').value;
+    const newPin = document.getElementById('newPinInput').value;
+    
+    // Verify current PIN
+    const authData = await chrome.storage.local.get(['pin']);
+    const hashedCurrentPin = await this.hashPin(currentPin);
+    
+    if (hashedCurrentPin !== authData.pin) {
+      this.showNotification('Current PIN is incorrect. Please try again.', 'error');
+      document.getElementById('currentPinInput').value = '';
+      this.updatePinDots('currentPinInput', 'currentPinDot');
+      this.updateChangePinButton();
+      return;
+    }
+    
+    // Check if new PIN is different from current PIN
+    if (currentPin === newPin) {
+      this.showNotification('New PIN must be different from current PIN.', 'error');
+      document.getElementById('newPinInput').value = '';
+      this.updatePinDots('newPinInput', 'newPinDot');
+      this.updateChangePinButton();
+      return;
+    }
+    
+    // Update PIN
+    const hashedNewPin = await this.hashPin(newPin);
+    await chrome.storage.local.set({ pin: hashedNewPin });
+    
+    this.showNotification('PIN changed successfully!', 'success');
+    this.hideChangePinModal();
+  }
+
+  // In-app notification system
+  showNotification(message, type = 'success') {
+    const notification = document.getElementById('notification');
+    const icon = document.getElementById('notificationIcon');
+    const text = document.getElementById('notificationText');
+    
+    // Set message and icon
+    text.textContent = message;
+    icon.textContent = type === 'success' ? '✓' : '✗';
+    
+    // Set styling based on type
+    notification.className = `notification ${type}`;
+    
+    // Show notification
+    notification.style.display = 'block';
+    setTimeout(() => {
+      notification.classList.add('show');
+    }, 10);
+    
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+      this.hideNotification();
+    }, 3000);
+  }
+
+  hideNotification() {
+    const notification = document.getElementById('notification');
+    notification.classList.remove('show');
+    setTimeout(() => {
+      notification.style.display = 'none';
+    }, 300);
   }
 
   async setupPin(pin) {
@@ -575,11 +874,15 @@ class BitcoinMini {
     await chrome.storage.local.set({
       pin: hashedPin,
       isSetup: true,
-      isLocked: false
+      isLocked: false,
+      vaultTimeout: 'extension_open' // Set secure default for new users
     });
-    this.showMainContent();
+    this.vaultTimeout = 'extension_open'; // Update current instance
     this.showAddressSection();
-    this.loadData();
+    
+    // Refresh price data to ensure USD values work correctly
+    await this.refreshPrice();
+    this.renderWatchlist();
   }
 
   async unlockPin(pin) {
@@ -588,9 +891,11 @@ class BitcoinMini {
     
     if (hashedPin === authData.pin) {
       await chrome.storage.local.set({ isLocked: false });
-      this.showMainContent();
       this.showAddressSection();
-      this.loadData();
+      
+      // Refresh price data to ensure USD values work correctly
+      await this.refreshPrice();
+      this.renderWatchlist();
       
       // Clear PIN input after successful unlock
       document.getElementById('pinInput').value = '';
@@ -602,11 +907,13 @@ class BitcoinMini {
   }
 
   async resetAllData() {
-    if (confirm('⚠️ WARNING: This will permanently delete ALL your Bitcoin addresses, balances, and data. This action cannot be undone. Are you absolutely sure?')) {
-      await chrome.storage.local.clear();
-      this.watchlist = [];
-      this.showPinSetup();
-    }
+    await chrome.storage.local.clear();
+    this.watchlist = [];
+    this.showAddressSection();
+    
+    // Refresh price data and render empty watchlist
+    await this.refreshPrice();
+    this.renderWatchlist();
   }
 
   async hashPin(pin) {
@@ -621,20 +928,141 @@ class BitcoinMini {
     const input = document.getElementById(inputId);
     const value = input.value;
     
-    for (let i = 1; i <= 4; i++) {
+    // Always show up to 6 dots for both setup and unlock
+    const maxDots = 6;
+    
+    for (let i = 1; i <= maxDots; i++) {
       const dot = document.getElementById(dotPrefix + i);
-      if (i <= value.length) {
-        dot.classList.add('filled');
-      } else {
-        dot.classList.remove('filled');
+      if (dot) {
+        if (i <= value.length) {
+          dot.classList.add('filled');
+        } else {
+          dot.classList.remove('filled');
+        }
       }
     }
     
     // Enable/disable button based on PIN length
-    const button = inputId === 'pinSetupInput' ? 
-      document.getElementById('setupPinBtn') : 
-      document.getElementById('unlockBtn');
-    button.disabled = value.length !== 4;
+    if (inputId === 'pinSetupInput') {
+      const button = document.getElementById('confirmPinSetupBtn');
+      if (button) {
+        // Enable button when PIN is 4-6 characters and all digits
+        button.disabled = !(value.length >= 4 && value.length <= 6 && /^\d+$/.test(value));
+      }
+    } else {
+      const button = document.getElementById('unlockBtn');
+      if (button) {
+        // For unlock, we need to check against the stored PIN length
+        // Since we can't get the exact length from hash, we'll enable for 4-6 digits
+        button.disabled = !(value.length >= 4 && value.length <= 6 && /^\d+$/.test(value));
+      }
+    }
+  }
+
+  // Vault timeout functionality
+  startVaultTimeout() {
+    // Clear existing timeout
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
+    }
+
+    // Don't start timeout if vault is already locked or timeout is set to 'never'
+    if (this.vaultTimeout === 'never' || this.vaultTimeout === 'extension_open') {
+      return;
+    }
+
+    const authData = chrome.storage.local.get(['isLocked']);
+    authData.then(data => {
+      if (data.isLocked) {
+        return; // Don't start timeout if already locked
+      }
+
+      // Handle special timeout types
+      if (this.vaultTimeout === 'browser_restart') {
+        // Check if this is a fresh browser session
+        this.checkBrowserRestart();
+        return;
+      }
+
+      if (this.vaultTimeout === 'system_lock') {
+        // Listen for system lock events (limited in browser extensions)
+        this.setupSystemLockListener();
+        return;
+      }
+
+      // Handle time-based timeouts
+      const timeoutMinutes = parseInt(this.vaultTimeout);
+      if (timeoutMinutes > 0) {
+        const timeoutMs = timeoutMinutes * 60 * 1000; // Convert to milliseconds
+        this.timeoutId = setTimeout(() => {
+          this.autoLockVault();
+        }, timeoutMs);
+      }
+    });
+  }
+
+  async autoLockVault() {
+    const authData = await chrome.storage.local.get(['isLocked', 'pin']);
+    
+    // Only auto-lock if vault is unlocked and PIN is set up
+    if (!authData.isLocked && authData.pin) {
+      await chrome.storage.local.set({ isLocked: true });
+      this.hideAddressSection();
+    }
+  }
+
+  // Track user activity to reset timeout
+  trackActivity() {
+    this.lastActivity = Date.now();
+    this.startVaultTimeout(); // Restart timeout on activity
+  }
+
+  // Check if browser was restarted
+  async checkBrowserRestart() {
+    const sessionData = await chrome.storage.local.get(['lastSessionId']);
+    const currentSessionId = Date.now().toString();
+    
+    if (!sessionData.lastSessionId) {
+      // First time setup
+      await chrome.storage.local.set({ lastSessionId: currentSessionId });
+      return;
+    }
+    
+    // Check if session ID is significantly different (browser restart)
+    const timeDiff = parseInt(currentSessionId) - parseInt(sessionData.lastSessionId);
+    if (timeDiff > 300000) { // 5 minutes - likely a browser restart
+      await this.autoLockVault();
+    }
+    
+    // Update session ID
+    await chrome.storage.local.set({ lastSessionId: currentSessionId });
+  }
+
+  // Setup system lock listener (limited functionality in browser extensions)
+  setupSystemLockListener() {
+    // Browser extensions have limited access to system events
+    // We'll use visibility change as a proxy for system lock
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        // Page became hidden - could be system lock, tab switch, or minimize
+        setTimeout(() => {
+          if (document.hidden) {
+            // Still hidden after delay - likely system lock
+            this.autoLockVault();
+          }
+        }, 1000);
+      }
+    });
+
+    // Also listen for window blur (when user switches away)
+    window.addEventListener('blur', () => {
+      setTimeout(() => {
+        if (document.hidden) {
+          this.autoLockVault();
+        }
+      }, 1000);
+    });
   }
 }
 
