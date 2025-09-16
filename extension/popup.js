@@ -6,6 +6,7 @@ if (typeof browser === "undefined") {
 
 class BitcoinMini {
   constructor() {
+    console.log('BitcoinMini constructor called');
     this.unit = 'BTC';
     this.watchlist = [];
     this.vaultTimeout = 'never'; // Default for existing users, will be set to 'extension_open' when PIN is first created
@@ -15,6 +16,7 @@ class BitcoinMini {
   }
   
   async init() {
+    console.log('BitcoinMini init() called');
     // Load data first to get current vault timeout setting
     await this.loadData();
     
@@ -59,189 +61,260 @@ class BitcoinMini {
   
   // Events
   bindEvents() {
-    document.getElementById('refreshPriceBtn').onclick = () => {
-      this.trackActivity();
-      this.refreshPrice();
-    };
-    document.getElementById('refreshFeesBtn').onclick = () => {
-      this.trackActivity();
-      this.refreshFees();
-    };
-    document.getElementById('addWatchBtn').onclick = () => {
-      this.trackActivity();
-      this.addWatch();
-    };
-    document.getElementById('toggleBtcBtn').onclick = () => {
-      this.trackActivity();
-      this.setUnit('BTC');
-    };
-    document.getElementById('toggleSatsBtn').onclick = () => {
-      this.trackActivity();
-      this.setUnit('SATS');
-    };
-    document.getElementById('toggleUsdBtn').onclick = () => {
-      this.trackActivity();
-      this.setUnit('USD');
-    };
+    console.log('bindEvents() called - setting up event listeners');
+    
+    // Test basic click functionality
+    document.addEventListener('click', (e) => {
+      console.log('Click detected on:', e.target);
+    });
+    
+    // Add null checks for all button elements
+    const refreshPriceBtn = document.getElementById('refreshPriceBtn');
+    const refreshFeesBtn = document.getElementById('refreshFeesBtn');
+    const addWatchBtn = document.getElementById('addWatchBtn');
+    const toggleBtcBtn = document.getElementById('toggleBtcBtn');
+    const toggleSatsBtn = document.getElementById('toggleSatsBtn');
+    const toggleUsdBtn = document.getElementById('toggleUsdBtn');
+    
+    if (refreshPriceBtn) {
+      console.log('Refresh price button found, adding click handler');
+      refreshPriceBtn.onclick = () => {
+        console.log('Refresh price button clicked!');
+        this.trackActivity();
+        this.refreshPrice();
+      };
+    } else {
+      console.log('Refresh price button NOT found');
+    }
+    
+    if (refreshFeesBtn) {
+      refreshFeesBtn.onclick = () => {
+        this.trackActivity();
+        this.refreshFees();
+      };
+    }
+    
+    if (addWatchBtn) {
+      addWatchBtn.onclick = () => {
+        this.trackActivity();
+        this.addWatch();
+      };
+    }
+    
+    if (toggleBtcBtn) {
+      toggleBtcBtn.onclick = () => {
+        this.trackActivity();
+        this.setUnit('BTC');
+      };
+    }
+    
+    if (toggleSatsBtn) {
+      toggleSatsBtn.onclick = () => {
+        this.trackActivity();
+        this.setUnit('SATS');
+      };
+    }
+    
+    if (toggleUsdBtn) {
+      toggleUsdBtn.onclick = () => {
+        this.trackActivity();
+        this.setUnit('USD');
+      };
+    }
     
     // Input elements
     const addrInput = document.getElementById('addr');
     const labelInput = document.getElementById('label');
     
     // Track activity on input interactions
-    addrInput.addEventListener('input', () => this.trackActivity());
-    labelInput.addEventListener('input', () => this.trackActivity());
+    if (addrInput) {
+      addrInput.addEventListener('input', () => this.trackActivity());
+      addrInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          this.trackActivity();
+          this.addWatch();
+        }
+      });
+    }
     
-    // Enter key support
-    addrInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        this.trackActivity();
-        this.addWatch();
-      }
-    });
-    
-    labelInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        this.trackActivity();
-        this.addWatch();
-      }
-    });
+    if (labelInput) {
+      labelInput.addEventListener('input', () => this.trackActivity());
+      labelInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          this.trackActivity();
+          this.addWatch();
+        }
+      });
+    }
     
     // Risk info button tooltip
-    document.getElementById('riskInfoBtn').addEventListener('click', (e) => {
-      e.stopPropagation();
-      const tooltip = document.getElementById('riskTooltip');
-      tooltip.classList.toggle('show');
-      
-      // Improved positioning - center tooltip relative to button
-      const rect = e.target.getBoundingClientRect();
-      const tooltipWidth = 300; // Max width from CSS
-      const tooltipHeight = 200; // Estimated height
-      
-      // Position tooltip to the left of button, centered vertically
-      let left = rect.left - tooltipWidth - 10;
-      let top = rect.top - (tooltipHeight / 2) + (rect.height / 2);
-      
-      // Ensure tooltip stays within viewport
-      if (left < 10) left = 10;
-      if (top < 10) top = rect.bottom + 10;
-      if (top + tooltipHeight > window.innerHeight - 10) {
-        top = window.innerHeight - tooltipHeight - 10;
-      }
-      
-      tooltip.style.left = left + 'px';
-      tooltip.style.top = top + 'px';
-    });
+    const riskInfoBtn = document.getElementById('riskInfoBtn');
+    if (riskInfoBtn) {
+      riskInfoBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const tooltip = document.getElementById('riskTooltip');
+        if (tooltip) {
+          tooltip.classList.toggle('show');
+          
+          // Improved positioning - center tooltip relative to button
+          const rect = e.target.getBoundingClientRect();
+          const tooltipWidth = 300; // Max width from CSS
+          const tooltipHeight = 200; // Estimated height
+          
+          // Position tooltip to the left of button, centered vertically
+          let left = rect.left - tooltipWidth - 10;
+          let top = rect.top - (tooltipHeight / 2) + (rect.height / 2);
+          
+          // Ensure tooltip stays within viewport
+          if (left < 10) left = 10;
+          if (top < 10) top = rect.bottom + 10;
+          if (top + tooltipHeight > window.innerHeight - 10) {
+            top = window.innerHeight - tooltipHeight - 10;
+          }
+          
+          tooltip.style.left = left + 'px';
+          tooltip.style.top = top + 'px';
+        }
+      });
+    }
     
     // Handle remove button clicks
     document.addEventListener('click', (e) => {
       if (e.target.classList.contains('remove-btn-small')) {
         const index = parseInt(e.target.getAttribute('data-index'));
         this.removeWatch(index);
+      } else if (e.target.classList.contains('refresh-btn-small')) {
+        const address = e.target.getAttribute('data-address');
+        this.refreshAddressData(address);
       }
     });
     
     // Fee info button tooltip
-    document.getElementById('feeInfoBtn').addEventListener('click', (e) => {
-      e.stopPropagation();
-      const tooltip = document.getElementById('feeTooltip');
-      tooltip.classList.toggle('show');
-      
-      // Position tooltip dynamically
-      const buttonRect = e.target.getBoundingClientRect();
-      const tooltipRect = tooltip.getBoundingClientRect();
-      
-      let left = buttonRect.left - tooltipRect.width + buttonRect.width;
-      let top = buttonRect.top + (buttonRect.height / 2) - (tooltipRect.height / 2);
-      
-      // Ensure tooltip stays within viewport
-      if (left < 0) left = 5;
-      if (top < 0) top = 5;
-      if (left + tooltipRect.width > window.innerWidth) {
-        left = window.innerWidth - tooltipRect.width - 5;
-      }
-      if (top + tooltipRect.height > window.innerHeight) {
-        top = window.innerHeight - tooltipRect.height - 5;
-      }
-      
-      tooltip.style.left = left + 'px';
-      tooltip.style.top = top + 'px';
-    });
+    const feeInfoBtn = document.getElementById('feeInfoBtn');
+    if (feeInfoBtn) {
+      feeInfoBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const tooltip = document.getElementById('feeTooltip');
+        if (tooltip) {
+          tooltip.classList.toggle('show');
+          
+          // Position tooltip dynamically
+          const buttonRect = e.target.getBoundingClientRect();
+          const tooltipRect = tooltip.getBoundingClientRect();
+          
+          let left = buttonRect.left - tooltipRect.width + buttonRect.width;
+          let top = buttonRect.top + (buttonRect.height / 2) - (tooltipRect.height / 2);
+          
+          // Ensure tooltip stays within viewport
+          if (left < 0) left = 5;
+          if (top < 0) top = 5;
+          if (left + tooltipRect.width > window.innerWidth) {
+            left = window.innerWidth - tooltipRect.width - 5;
+          }
+          if (top + tooltipRect.height > window.innerHeight) {
+            top = window.innerHeight - tooltipRect.height - 5;
+          }
+          
+          tooltip.style.left = left + 'px';
+          tooltip.style.top = top + 'px';
+        }
+      });
+    }
     
     // Close tooltip when clicking elsewhere
     document.addEventListener('click', (e) => {
       if (!e.target.closest('#riskInfoBtn') && !e.target.closest('#riskTooltip') && 
           !e.target.closest('#feeInfoBtn') && !e.target.closest('#feeTooltip')) {
-        document.getElementById('riskTooltip').classList.remove('show');
-        document.getElementById('feeTooltip').classList.remove('show');
+        const riskTooltip = document.getElementById('riskTooltip');
+        const feeTooltip = document.getElementById('feeTooltip');
+        if (riskTooltip) riskTooltip.classList.remove('show');
+        if (feeTooltip) feeTooltip.classList.remove('show');
       }
     });
 
     // PIN entry (only when locked)
-    document.getElementById('pinInput').addEventListener('input', (e) => {
-      // Allow any input during typing, but filter to numbers only
-      let value = e.target.value;
-      // Remove non-numeric characters
-      value = value.replace(/\D/g, '');
-      // Limit to 6 characters
-      value = value.substring(0, 6);
-      e.target.value = value;
-      
-      this.updatePinDots('pinInput', 'pinDot');
-    });
-
-    document.getElementById('unlockBtn').addEventListener('click', async () => {
-      const pin = document.getElementById('pinInput').value;
-      const success = await this.unlockPin(pin);
-      if (!success) {
-        this.showNotification('Invalid PIN. Please try again.', 'error');
-        document.getElementById('pinInput').value = '';
+    const pinInput = document.getElementById('pinInput');
+    if (pinInput) {
+      pinInput.addEventListener('input', (e) => {
+        // Allow any input during typing, but filter to numbers only
+        let value = e.target.value;
+        // Remove non-numeric characters
+        value = value.replace(/\D/g, '');
+        // Limit to 6 characters
+        value = value.substring(0, 6);
+        e.target.value = value;
+        
         this.updatePinDots('pinInput', 'pinDot');
-      }
-    });
+      });
+    }
 
-    // Reset button
-    document.getElementById('resetBtn').addEventListener('click', () => {
-      this.showResetConfirmModal();
-    });
-
-    // Enter key support for PIN input
-    document.getElementById('pinInput').addEventListener('keypress', async (e) => {
-      if (e.key === 'Enter' && document.getElementById('unlockBtn').disabled === false) {
-        const pin = document.getElementById('pinInput').value;
+    const unlockBtn = document.getElementById('unlockBtn');
+    if (unlockBtn) {
+      unlockBtn.addEventListener('click', async () => {
+        const pinInput = document.getElementById('pinInput');
+        const pin = pinInput ? pinInput.value : '';
         const success = await this.unlockPin(pin);
         if (!success) {
           this.showNotification('Invalid PIN. Please try again.', 'error');
-          document.getElementById('pinInput').value = '';
-          this.updatePinDots('pinInput', 'pinDot');
+          if (pinInput) {
+            pinInput.value = '';
+            this.updatePinDots('pinInput', 'pinDot');
+          }
         }
-      }
-    });
+      });
+    }
+
+    // Reset button
+    const resetBtn = document.getElementById('resetBtn');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        this.showResetConfirmModal();
+      });
+    }
+
+    // Enter key support for PIN input
+    if (pinInput) {
+      pinInput.addEventListener('keypress', async (e) => {
+        if (e.key === 'Enter' && unlockBtn && !unlockBtn.disabled) {
+          const pin = pinInput.value;
+          const success = await this.unlockPin(pin);
+          if (!success) {
+            this.showNotification('Invalid PIN. Please try again.', 'error');
+            pinInput.value = '';
+            this.updatePinDots('pinInput', 'pinDot');
+          }
+        }
+      });
+    }
 
     // Lock/Unlock button
-    document.getElementById('lockBtn').addEventListener('click', async () => {
-      const authData = await browser.storage.local.get(['isLocked', 'pin']);
-      if (authData.isLocked) {
-        // Show PIN entry to unlock
-        this.showPinEntry();
-        // Focus the PIN input when unlock button is clicked
-        setTimeout(() => {
-          document.getElementById('pinInput').focus();
-        }, 100);
-      } else {
-        // Check if PIN is set up
-        if (!authData.pin) {
-          // First time locking - show PIN setup modal
-          this.showPinSetupModal();
+    const lockBtn = document.getElementById('lockBtn');
+    if (lockBtn) {
+      lockBtn.addEventListener('click', async () => {
+        const authData = await browser.storage.local.get(['isLocked', 'pin']);
+        if (authData.isLocked) {
+          // Show PIN entry to unlock
+          this.showPinEntry();
+          // Focus the PIN input when unlock button is clicked
+          setTimeout(() => {
+            const pinInput = document.getElementById('pinInput');
+            if (pinInput) pinInput.focus();
+          }, 100);
         } else {
-          // PIN already set up, just lock
-          await browser.storage.local.set({ isLocked: true });
-          this.hideAddressSection();
+          // Check if PIN is set up
+          if (!authData.pin) {
+            // First time locking - show PIN setup modal
+            this.showPinSetupModal();
+          } else {
+            // PIN already set up, just lock
+            await browser.storage.local.set({ isLocked: true });
+            this.hideAddressSection();
+          }
         }
-      }
-    });
+      });
+    }
 
     // PIN Setup Modal event listeners
     document.getElementById('pinSetupInput').addEventListener('input', (e) => {
@@ -321,8 +394,17 @@ class BitcoinMini {
     });
 
     // Change PIN modal event listeners
-    document.getElementById('changePinBtn').addEventListener('click', () => {
-      this.showChangePinModal();
+    document.getElementById('changePinBtn').addEventListener('click', async () => {
+      // Check if PIN is set up first
+      const authData = await browser.storage.local.get(['pin']);
+      if (!authData.pin) {
+        // No PIN set up, redirect to PIN creation
+        this.hideSettingsModal();
+        this.showPinSetupModal();
+      } else {
+        // PIN exists, show change PIN modal
+        this.showChangePinModal();
+      }
     });
 
     document.getElementById('cancelChangePinBtn').addEventListener('click', () => {
@@ -372,13 +454,66 @@ class BitcoinMini {
     });
   }
   
+  // Centralized API Error Handling
+  categorizeAPIError(response, error) {
+    if (!response) return 'network';
+    if (response.status === 429) return 'rate_limit';
+    if (response.status >= 500) return 'server';
+    if (response.status >= 400) return 'client';
+    return 'unknown';
+  }
+  
+  shouldRetryAPI(errorType, attempt) {
+    const retryable = ['network', 'server', 'rate_limit'];
+    return retryable.includes(errorType) && attempt < 3;
+  }
+  
+  getRetryDelay(attempt, errorType) {
+    if (errorType === 'rate_limit') return 5000; // 5s for rate limits
+    return Math.min(1000 * Math.pow(2, attempt), 10000); // Exponential backoff, max 10s
+  }
+  
+  async fetchWithRetry(url, options = {}, maxRetries = 3) {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await fetch(url, options);
+        
+        if (response.ok) return response;
+        
+        const errorType = this.categorizeAPIError(response, null);
+        
+        if (!this.shouldRetryAPI(errorType, attempt)) {
+          throw new Error(`API error: ${response.status} ${response.statusText}`);
+        }
+        
+        if (attempt < maxRetries) {
+          const delay = this.getRetryDelay(attempt, errorType);
+          console.log(`Retrying ${url} in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      } catch (error) {
+        if (attempt === maxRetries) throw error;
+        
+        const errorType = this.categorizeAPIError(null, error);
+        if (!this.shouldRetryAPI(errorType, attempt)) throw error;
+        
+        const delay = this.getRetryDelay(attempt, errorType);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
   // API Calls
   async refreshPrice() {
     try {
       // Fetch current price and historical data in parallel
       const [currentResponse, historicalResponse] = await Promise.all([
-        fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd'),
-        fetch('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=365&interval=daily')
+        fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd', {
+          headers: { 'User-Agent': 'BitcoinMini-Extension/1.0' }
+        }),
+        fetch('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=365&interval=daily', {
+          headers: { 'User-Agent': 'BitcoinMini-Extension/1.0' }
+        })
       ]);
       
       const currentData = await currentResponse.json();
@@ -415,14 +550,21 @@ class BitcoinMini {
       }
     } catch (error) {
       console.error('Price fetch error:', error);
-      document.getElementById('price').textContent = 'Error';
-      document.getElementById('priceChange').textContent = '';
+      document.getElementById('price').textContent = 'API Error';
+      document.getElementById('priceChange').textContent = 'Retry in progress...';
+      
+      // Auto-retry after 5 seconds
+      setTimeout(() => {
+        this.refreshPrice();
+      }, 5000);
     }
   }
   
   async refreshFees() {
     try {
-      const response = await fetch('https://mempool.space/api/v1/fees/recommended');
+      const response = await fetch('https://mempool.space/api/v1/fees/recommended', {
+        headers: { 'User-Agent': 'BitcoinMini-Extension/1.0' }
+      });
       const data = await response.json();
       if (data) {
         document.getElementById('fee_fast').textContent = data.fastestFee ? parseFloat(data.fastestFee).toFixed(1) : '—';
@@ -437,6 +579,16 @@ class BitcoinMini {
       }
     } catch (error) {
       console.error('Fees error:', error);
+      // Show error state for fees
+      document.getElementById('fee_fast').textContent = 'Error';
+      document.getElementById('fee_hour').textContent = 'Error';
+      document.getElementById('fee_econ').textContent = 'Error';
+      document.getElementById('feeTime').textContent = 'Retrying...';
+      
+      // Auto-retry after 5 seconds
+      setTimeout(() => {
+        this.refreshFees();
+      }, 5000);
     }
   }
   
@@ -474,11 +626,24 @@ class BitcoinMini {
     
     if (!addr) {
       errEl.textContent = 'Address required';
-      return;
-    }
+      r    }
     
     if (!this.validateAddress(addr)) {
-      errEl.textContent = 'Invalid Bitcoin address';
+      // Check what type of invalid input was provided
+      const txIdRegex = /^[a-fA-F0-9]{64}$/;
+      const blockHashRegex = /^[a-fA-F0-9]{64}$/;
+      
+      if (txIdRegex.test(addr)) {
+        errEl.textContent = 'Please enter a Bitcoin address, not a transaction ID';
+      } else if (blockHashRegex.test(addr)) {
+        errEl.textContent = 'Please enter a Bitcoin address, not a block hash';
+      } else if (addr.length < 25) {
+        errEl.textContent = 'Address is too short to be valid';
+      } else if (!/^[a-zA-HJ-NP-Z0-9]+$/.test(addr)) {
+        errEl.textContent = 'Address contains invalid characters';
+      } else {
+        errEl.textContent = 'Invalid Bitcoin address format';
+      }
       return;
     }
     
@@ -493,70 +658,241 @@ class BitcoinMini {
     const newItem = { address: addr, label: label || '', balance_btc: 0, quantum_risk: 'checking...' };
     this.watchlist.push(newItem);
     
-    // Fetch balance and check quantum exposure in parallel
+    // Debug log
+    console.log('Added address to watchlist:', addr, 'Total items:', this.watchlist.length);
+    
+    // Render immediately to show the address
+    this.renderWatchlist();
+    
+    // Fetch balance and check quantum exposure in parallel with timeout
     try {
-      const [summary, quantumResult] = await Promise.all([
-        this.fetchAddressSummary(addr),
-        this.checkQuantumExposure(addr)
-      ]);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Address data fetch timeout')), 45000)
+      );
+
+      const [summary, quantumResult] = await Promise.race([
+        Promise.all([
+          this.fetchAddressSummary(addr),
+          this.checkQuantumExposure(addr)
+        ]),
+        timeoutPromise
+      ]).catch(error => {
+        console.error('Promise.race error for', addr, ':', error);
+        throw error;
+      });
       
       newItem.balance_btc = summary.balance_btc || 0;
       newItem.quantum_risk = quantumResult.overall_risk;
+      
+      console.log(`Updated ${addr}: balance=${newItem.balance_btc}, risk=${newItem.quantum_risk}`);
+      
+      // Re-render after data is fetched
+      this.renderWatchlist();
     } catch (error) {
-      console.error('Address fetch error:', error);
-      newItem.quantum_risk = 'error';
+      console.error('Address fetch error for', addr, ':', error.message);
+      
+      // Handle timeout specifically
+      if (error && error.message && error.message.includes('timeout')) {
+        newItem.quantum_risk = 'timeout';
+        console.log(`Address ${addr} timed out - will retry in background`);
+        
+        // Retry in background after timeout
+        setTimeout(async () => {
+          try {
+            const [summary, quantumResult] = await Promise.all([
+              this.fetchAddressSummary(addr),
+              this.checkQuantumExposure(addr)
+            ]);
+            
+            newItem.balance_btc = summary.balance_btc || 0;
+            newItem.quantum_risk = quantumResult.overall_risk;
+            
+            console.log(`Background update for ${addr}: balance=${newItem.balance_btc}, risk=${newItem.quantum_risk}`);
+            this.renderWatchlist();
+            await this.saveData();
+          } catch (retryError) {
+            console.error('Background retry failed for', addr, ':', retryError.message);
+            newItem.quantum_risk = 'unknown';
+            this.renderWatchlist();
+          }
+        }, 10000); // Retry after 10 seconds
+      } else {
+        newItem.quantum_risk = 'unknown';
+      }
+      
+      // Re-render even on error
+      this.renderWatchlist();
     }
     
     // Clear inputs and save
     document.getElementById('addr').value = '';
     document.getElementById('label').value = '';
     await this.saveData();
-    this.renderWatchlist();
   }
   
   async fetchAddressSummary(address) {
-    const response = await fetch(`https://blockstream.info/api/address/${address}`);
-    const data = await response.json();
-    
-    const chainStats = data.chain_stats || {};
-    const mempoolStats = data.mempool_stats || {};
-    const funded = (chainStats.funded_txo_sum || 0) + (mempoolStats.funded_txo_sum || 0);
-    const spent = (chainStats.spent_txo_sum || 0) + (mempoolStats.spent_txo_sum || 0);
-    
-    return {
-      balance_btc: Math.max((funded - spent) / 1e8, 0)
-    };
+    try {
+      console.log('Fetching balance for address:', address);
+      
+      // Validate address before making API call
+      if (!this.validateAddress(address)) {
+        console.warn('Invalid address format provided to fetchAddressSummary:', address);
+        return { balance_btc: 0 };
+      }
+      
+      // Try Blockstream API first with retry logic
+      const response = await this.fetchWithRetry(`https://blockstream.info/api/address/${address}`, {
+        headers: {
+          'User-Agent': 'BitcoinMini-Extension/1.0'
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (!data) {
+        console.warn('No data returned for address:', address);
+        return await this.fetchAddressSummaryFallback(address);
+      }
+      
+      const chainStats = data.chain_stats || {};
+      const mempoolStats = data.mempool_stats || {};
+      const funded = (chainStats.funded_txo_sum || 0) + (mempoolStats.funded_txo_sum || 0);
+      const spent = (chainStats.spent_txo_sum || 0) + (mempoolStats.spent_txo_sum || 0);
+      const balance = Math.max((funded - spent) / 1e8, 0);
+      
+      console.log(`Balance for ${address}: ${balance} BTC`);
+      
+      return {
+        balance_btc: balance
+      };
+    } catch (error) {
+      console.error('Error fetching balance for', address, ':', error);
+      return await this.fetchAddressSummaryFallback(address);
+    }
+  }
+
+  async fetchAddressSummaryFallback(address) {
+    try {
+      console.log('Trying fallback API for address:', address);
+      
+      // Validate address before making API call
+      if (!this.validateAddress(address)) {
+        console.warn('Invalid address format provided to fetchAddressSummaryFallback:', address);
+        return { balance_btc: 0 };
+      }
+      
+      // Try Mempool.space API as fallback with retry logic
+      const response = await this.fetchWithRetry(`https://mempool.space/api/address/${address}`, {
+        headers: { 'User-Agent': 'BitcoinMini-Extension/1.0' }
+      });
+      
+      const data = await response.json();
+      
+      if (!data || !data.chain_stats) {
+        console.warn('No valid data from fallback API for address:', address);
+        return { balance_btc: 0 };
+      }
+      
+      const chainStats = data.chain_stats || {};
+      const mempoolStats = data.mempool_stats || {};
+      const funded = (chainStats.funded_txo_sum || 0) + (mempoolStats.funded_txo_sum || 0);
+      const spent = (chainStats.spent_txo_sum || 0) + (mempoolStats.spent_txo_sum || 0);
+      const balance = Math.max((funded - spent) / 1e8, 0);
+      
+      console.log(`Fallback balance for ${address}: ${balance} BTC`);
+      
+      return {
+        balance_btc: balance
+      };
+    } catch (error) {
+      console.error('Fallback API error for', address, ':', error);
+      return { balance_btc: 0 };
+    }
   }
   
   
   async checkQuantumExposure(address) {
     try {
-      const [addrInfo, utxos] = await Promise.all([
-        fetch(`https://blockstream.info/api/address/${address}`).then(r => {
-          if (!r.ok) throw new Error(`Address API error: ${r.status}`);
-          return r.json();
-        }),
-        fetch(`https://blockstream.info/api/address/${address}/utxo`).then(r => {
-          if (!r.ok) throw new Error(`UTXO API error: ${r.status}`);
-          return r.json();
-        })
-      ]);
+      // Add null check for address
+      if (!address || typeof address !== 'string') {
+        console.warn('Invalid address provided to checkQuantumExposure:', address);
+        return { overall_risk: 'error', exposed_value_btc: 0 };
+      }
+
+      // Validate address format before making API calls
+      if (!this.validateAddress(address)) {
+        console.warn('Invalid address format provided to checkQuantumExposure:', address);
+        return { overall_risk: 'unknown', exposed_value_btc: 0 };
+      }
+
+      // Skip known problematic addresses (like Genesis block)
+      if (address === '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa') {
+        console.log('Skipping quantum check for Genesis block address');
+        return { overall_risk: 'unknown', exposed_value_btc: 0 };
+      }
+
+      // Additional check for Genesis block address variations
+      if (address.includes('1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa')) {
+        console.log('Skipping quantum check for Genesis block address (variant)');
+        return { overall_risk: 'unknown', exposed_value_btc: 0 };
+      }
+
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('API timeout')), 40000)
+      );
+
+      const [addrInfo, utxos] = await Promise.race([
+        Promise.all([
+          this.fetchWithRetry(`https://blockstream.info/api/address/${address}`, {
+            headers: { 'User-Agent': 'BitcoinMini-Extension/1.0' }
+          }).then(r => r.json()).catch(error => {
+            console.log(`Address API error for ${address}:`, error.message);
+            return null;
+          }),
+          this.fetchWithRetry(`https://blockstream.info/api/address/${address}/utxo`, {
+            headers: { 'User-Agent': 'BitcoinMini-Extension/1.0' }
+          }).then(r => r.json()).catch(error => {
+            console.log(`UTXO API error for ${address}:`, error.message);
+            return null;
+          })
+        ]),
+        timeoutPromise
+      ]).catch(error => {
+        console.log(`API timeout or error for ${address}:`, error.message);
+        return [null, null];
+      });
       
       let exposedValue = 0;
       let hasExposed = false;
       
-      // Handle case where utxos might be null or empty
-      if (!utxos || !Array.isArray(utxos)) {
-        console.warn('No UTXOs found for address:', address);
+      // Handle case where API calls failed or returned null
+      if (!addrInfo || !utxos || !Array.isArray(utxos)) {
+        console.log('API data unavailable for address:', address, '- returning unknown risk');
         return { overall_risk: 'unknown', exposed_value_btc: 0 };
       }
       
       for (const utxo of utxos.slice(0, 5)) { // Limit to 5 for speed
         try {
-          const tx = await fetch(`https://blockstream.info/api/tx/${utxo.txid}`).then(r => {
-            if (!r.ok) throw new Error(`Transaction API error: ${r.status}`);
-            return r.json();
+          // Add null checks for utxo properties
+          if (!utxo || !utxo.txid || typeof utxo.txid !== 'string') {
+            console.warn('Invalid UTXO data:', utxo);
+            continue;
+          }
+
+          const tx = await this.fetchWithRetry(`https://blockstream.info/api/tx/${utxo.txid}`, {
+            headers: { 'User-Agent': 'BitcoinMini-Extension/1.0' }
+          }).then(r => r.json()).catch(error => {
+            console.warn(`Transaction API error for ${utxo.txid}:`, error.message);
+            return null; // Return null instead of throwing
           });
+
+          // Check if transaction data is valid
+          if (!tx || !tx.vout || !Array.isArray(tx.vout)) {
+            console.warn('Invalid transaction data for UTXO:', utxo.txid);
+            continue;
+          }
+
           const scriptType = tx.vout?.[utxo.vout]?.scriptpubkey_type;
           
           if (['p2pk', 'v1_p2tr'].includes(scriptType?.toLowerCase())) {
@@ -564,13 +900,19 @@ class BitcoinMini {
             exposedValue += (utxo.value || 0) / 1e8;
           }
         } catch (e) {
-          console.warn('Error checking UTXO:', utxo.txid, e.message);
+          console.warn('Error checking UTXO:', utxo?.txid || 'unknown', e.message);
           // Skip on error
         }
       }
       
       const spentCount = addrInfo?.chain_stats?.spent_txo_count || 0;
-      const addressType = this.inferAddressType(address);
+      let addressType = 'unknown';
+      try {
+        addressType = this.inferAddressType(address);
+      } catch (e) {
+        console.warn('Error inferring address type:', e.message);
+        addressType = 'unknown';
+      }
       const reuseRisk = spentCount > 0 && ['p2pkh', 'p2wpkh_or_wsh'].includes(addressType);
       
       let overallRisk = 'low';
@@ -598,15 +940,59 @@ class BitcoinMini {
   }
   
   validateAddress(addr) {
-    return /^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,87}$/.test(addr);
+    // Check if it's a valid Bitcoin address format
+    const addressRegex = /^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,87}$/;
+    
+    // Check if it looks like a transaction ID (64 hex characters)
+    const txIdRegex = /^[a-fA-F0-9]{64}$/;
+    
+    // Check if it looks like a block hash (64 hex characters)
+    const blockHashRegex = /^[a-fA-F0-9]{64}$/;
+    
+    // Check if it's too short to be a valid address
+    if (addr.length < 25) {
+      return false;
+    }
+    
+    // Check if it looks like a transaction ID or block hash
+    if (txIdRegex.test(addr) || blockHashRegex.test(addr)) {
+      return false; // Reject transaction IDs and block hashes
+    }
+    
+    // Check if it contains invalid characters for Bitcoin addresses
+    if (!/^[a-zA-HJ-NP-Z0-9]+$/.test(addr)) {
+      return false;
+    }
+    
+    return addressRegex.test(addr);
   }
   
   // UI
   renderWatchlist() {
     const tbody = document.getElementById('watchRows');
+    if (!tbody) {
+      console.error('watchRows element not found');
+      return;
+    }
+    
+    // Clear existing content
     tbody.innerHTML = '';
     
+    // Check if watchlist exists and is an array
+    if (!this.watchlist || !Array.isArray(this.watchlist)) {
+      console.warn('Watchlist is not an array:', this.watchlist);
+      this.watchlist = [];
+    }
+    
+    // Debug log
+    console.log('Rendering watchlist with', this.watchlist.length, 'items');
+    
     this.watchlist.forEach((item, index) => {
+      if (!item || !item.address) {
+        console.warn('Invalid watchlist item at index', index, item);
+        return;
+      }
+      
       const row = document.createElement('tr');
       const balance = this.formatAmount(item.balance_btc);
       const risk = this.formatQuantumRisk(item.quantum_risk);
@@ -616,7 +1002,7 @@ class BitcoinMini {
         <td class="muted">${item.address.slice(0, 8)}...</td>
         <td>${balance}</td>
         <td class="${risk.class}">${risk.text}</td>
-        <td style="text-align: right;"><div style="display: flex; justify-content: flex-end;"><button class="remove-btn-small" data-index="${index}" title="Remove address"></button></div></td>
+        <td style="text-align: right;"><div style="display: flex; justify-content: flex-end; gap: 5px;"><button class="refresh-btn-small" data-address="${item.address}" title="Refresh address data">🔄</button><button class="remove-btn-small" data-index="${index}" title="Remove address"></button></div></td>
       `;
       
       tbody.appendChild(row);
@@ -632,6 +1018,10 @@ class BitcoinMini {
     
     if (risk === 'error') {
       return { text: '❌ Error', class: 'warn' };
+    }
+    
+    if (risk === 'timeout') {
+      return { text: '⏱️ Timeout', class: 'muted' };
     }
     
     if (risk === 'unknown') {
@@ -654,6 +1044,39 @@ class BitcoinMini {
     this.watchlist.splice(index, 1);
     await this.saveData();
     this.renderWatchlist();
+  }
+
+  async refreshAddressData(address) {
+    console.log('Manually refreshing data for address:', address);
+    
+    const item = this.watchlist.find(item => item.address === address);
+    if (!item) {
+      console.error('Address not found in watchlist:', address);
+      return;
+    }
+
+    // Set to checking state
+    item.quantum_risk = 'checking...';
+    this.renderWatchlist();
+
+    try {
+      const [summary, quantumResult] = await Promise.all([
+        this.fetchAddressSummary(address),
+        this.checkQuantumExposure(address)
+      ]);
+      
+      item.balance_btc = summary.balance_btc || 0;
+      item.quantum_risk = quantumResult.overall_risk;
+      
+      console.log(`Refreshed ${address}: balance=${item.balance_btc}, risk=${item.quantum_risk}`);
+      
+      this.renderWatchlist();
+      await this.saveData();
+    } catch (error) {
+      console.error('Refresh error for', address, ':', error);
+      item.quantum_risk = 'unknown';
+      this.renderWatchlist();
+    }
   }
   
   formatAmount(btc) {
@@ -1124,5 +1547,14 @@ class BitcoinMini {
 // Start the app
 let app;
 window.addEventListener('DOMContentLoaded', () => {
+  console.log('DOMContentLoaded event fired');
   app = new BitcoinMini();
 });
+
+// Also try immediate initialization as fallback
+if (document.readyState === 'loading') {
+  console.log('Document still loading, waiting for DOMContentLoaded');
+} else {
+  console.log('Document already loaded, initializing immediately');
+  app = new BitcoinMini();
+}
