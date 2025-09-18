@@ -49,6 +49,8 @@ If you find this extension useful, consider supporting development:
 
 **Lightning Address**: `greenpenguin6@primal.net`
 
+![Lightning QR](lightning-qr.png)
+
 Every satoshi helps keep this project maintained and improved! ⚡
 
 ## Privacy
