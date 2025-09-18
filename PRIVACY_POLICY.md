@@ -68,7 +68,7 @@ We may update this privacy policy occasionally. Changes will be posted in the ex
 
 ## Contact
 For privacy questions or concerns:
-- **GitHub Issues**: https://github.com/bitcoin-mini/extension/issues
+- **GitHub Issues**: https://github.com/vabraham/bitcoin-mini/issues/
 - This extension is open source and auditable
 
 ## Compliance
