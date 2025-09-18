@@ -3,708 +3,7 @@
 <head>
   <meta charset="utf-8">
   <title>Bitcoin Mini</title>
-  <style>
-    body { margin: 0; font-family: system-ui; background: #0b1220; color: #e8eef7; width: 440px; }
-    .card { background: #121a2b; border-radius: 8px; padding: 12px; margin: 4px 0; }
-    h1 { margin: 0 0 8px; color: #f2a900; font-size: 16px; }
-    input, button { padding: 8px; border-radius: 4px; border: 1px solid #333; }
-    input { 
-      width: 100%; 
-      background: #0b1220; 
-      color: #e8eef7; 
-      margin-bottom: 4px; 
-      -webkit-user-select: text;
-      user-select: text;
-      font-size: 13px;
-      box-sizing: border-box;
-    }
-    input:focus { outline: none; border-color: #f2a900; }
-    button { background: #f2a900; color: #000; cursor: pointer; }
-    .row { display: flex; gap: 8px; margin: 8px 0; }
-    .muted { color: #8aa0b6; font-size: 12px; }
-    .warn { color: #ee5253; font-size: 12px; }
-    .ok { color: #1dd1a1; }
-    table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    th, td { padding: 4px; border-bottom: 1px solid #333; text-align: left; }
-    .price-up { color: #1dd1a1; }
-    .price-down { color: #ee5253; }
-    .price-neutral { color: #e8eef7; }
-    
-    /* Info button styling */
-    .info-btn {
-      cursor: pointer;
-      color: #8aa0b6;
-      font-size: 12px;
-      margin-left: 4px;
-      display: inline-block;
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: #333;
-      text-align: center;
-      line-height: 16px;
-      transition: all 0.2s;
-    }
-    
-    .info-btn:hover {
-      background: #f2a900;
-      color: #000;
-    }
-    
-    /* Tooltip styling */
-    .tooltip {
-      position: absolute;
-      background: #121a2b;
-      border: 1px solid #333;
-      border-radius: 6px;
-      padding: 12px;
-      font-size: 11px;
-      line-height: 1.4;
-      max-width: 300px;
-      z-index: 3000;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      display: none;
-    }
-    
-    .tooltip.show {
-      display: block;
-    }
-    
-    .tooltip h4 {
-      margin: 0 0 8px 0;
-      color: #f2a900;
-      font-size: 12px;
-    }
-    
-    .tooltip ul {
-      margin: 0;
-      padding-left: 16px;
-    }
-    
-    .tooltip li {
-      margin: 4px 0;
-    }
-    
-    /* Total value styling - Option 1 + 4 */
-    .total-value {
-      font-size: 15px;
-      font-weight: 600;
-      color: #f2a900;
-    }
-    
-    .total-label {
-      color: #e8eef7;
-    }
-    
-    /* Small remove button styling */
-    .remove-btn-small {
-      width: 20px;
-      height: 20px;
-      padding: 2px;
-      background: #f2a900;
-      color: #000;
-      border: none;
-      border-radius: 3px;
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: bold;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.2s;
-    }
-    
-    .remove-btn-small:hover {
-      background: #e09900;
-    }
-    
-    .remove-btn-small::before {
-      content: "🗑️";
-      filter: contrast(3) brightness(0.4);
-      font-weight: 900;
-    }
-    
-    /* Small refresh button styling */
-    .refresh-btn-small {
-      width: 20px;
-      height: 20px;
-      padding: 2px;
-      background: #059669;
-      color: white;
-      border: none;
-      border-radius: 3px;
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: bold;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.2s;
-    }
-    
-    .refresh-btn-small:hover {
-      background: #047857;
-    }
-    
-    .refresh-btn-small:disabled {
-      background: #666;
-      cursor: not-allowed;
-    }
-    
-    /* Fee category styling - 5 tier system */
-    .fee-very-low { color: #27ae60; }
-    .fee-low { color: #2ecc71; }
-    .fee-medium { color: #f39c12; }
-    .fee-high { color: #e67e22; }
-    .fee-very-high { color: #e74c3c; }
-    
-    /* Fee info button styling */
-    .fee-info-btn {
-      cursor: pointer;
-      color: #8aa0b6;
-      font-size: 12px;
-      margin-left: 4px;
-      display: inline-block;
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: #333;
-      text-align: center;
-      line-height: 16px;
-      transition: all 0.2s;
-    }
-    
-    .fee-info-btn:hover {
-      background: #f2a900;
-      color: #000;
-    }
-    
-    /* Authentication styling */
-    .auth-screen {
-      display: none;
-      text-align: center;
-      padding: 20px;
-    }
-    
-    .auth-screen.show {
-      display: block;
-    }
-    
-    .pin-input {
-      font-size: 24px;
-      letter-spacing: 8px;
-      text-align: left;
-      text-indent: 0;
-      width: 120px;
-      margin: 10px auto;
-      background: #0b1220;
-      color: #e8eef7;
-      border: 2px solid #333;
-      border-radius: 6px;
-      padding: 10px;
-      box-sizing: border-box;
-      display: block;
-    }
-    
-    .pin-input::placeholder {
-      text-align: left;
-      letter-spacing: 8px;
-      opacity: 0.7;
-    }
-    
-    .pin-input:focus {
-      border-color: #f2a900;
-      outline: none;
-    }
-    
-    .pin-dots {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      margin: 10px 0;
-    }
-    
-    .pin-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: #333;
-      transition: background 0.2s;
-    }
-    
-    .pin-dot.filled {
-      background: #f2a900;
-    }
-    
-    .auth-warning {
-      background: #2d1b1b;
-      border: 1px solid #c53030;
-      border-radius: 6px;
-      padding: 12px;
-      margin: 15px 0;
-      font-size: 11px;
-      line-height: 1.4;
-    }
-    
-    .auth-warning strong {
-      color: #c53030;
-    }
-    
-    .reset-btn {
-      background: #c53030;
-      color: white;
-      border: none;
-      padding: 4px 8px;
-      border-radius: 3px;
-      cursor: pointer;
-      font-size: 11px;
-      font-weight: bold;
-      margin-top: 10px;
-    }
-    
-    .reset-btn:hover {
-      background: #a02626;
-    }
-    
-    .reset-btn:disabled {
-      background: #666;
-      cursor: not-allowed;
-    }
-    
-    .main-content {
-      display: block;
-    }
-    
-    .main-content.hidden {
-      display: none;
-    }
-    
-    /* Bottom PIN entry styling */
-    #pinEntry .pin-input {
-      font-size: 18px;
-      letter-spacing: 4px;
-      width: 90px;
-      margin: 6px auto;
-      text-align: left;
-      text-indent: 0;
-      box-sizing: border-box;
-      display: block;
-    }
-    
-    #pinEntry .pin-input::placeholder {
-      text-align: left;
-      letter-spacing: 4px;
-      opacity: 0.7;
-    }
-    
-    #pinEntry .pin-dots {
-      margin: 6px 0 12px 0;
-    }
-    
-    #pinEntry .auth-warning {
-      font-size: 10px;
-      line-height: 1.3;
-    }
-    
-    #pinEntry h4 {
-      font-size: 14px;
-    }
-    
-    /* Unlock button styling */
-    #unlockBtn {
-      background: #059669 !important;
-      color: white !important;
-      border: none !important;
-      padding: 4px 12px !important;
-      border-radius: 3px !important;
-      font-size: 11px !important;
-      font-weight: bold !important;
-      cursor: pointer !important;
-    }
-    
-    #unlockBtn:hover {
-      background: #047857 !important;
-    }
-    
-    #unlockBtn:disabled {
-      background: #666 !important;
-      cursor: not-allowed !important;
-    }
-    
-    /* Modal styling */
-    .modal-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.7);
-      z-index: 2000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    
-    .modal-content {
-      background: #121a2b;
-      border: 1px solid #333;
-      border-radius: 12px;
-      padding: 24px;
-      max-width: 400px;
-      width: 90%;
-      text-align: center;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-    }
-    
-    .modal-content h3 {
-      margin: 0 0 12px 0;
-      color: #f2a900;
-      font-size: 18px;
-    }
-    
-    .modal-content p {
-      margin: 0 0 16px 0;
-      color: #e8eef7;
-      font-size: 14px;
-    }
-    
-    .modal-buttons {
-      display: flex;
-      gap: 12px;
-      justify-content: center;
-      margin-top: 20px;
-    }
-    
-    .cancel-btn {
-      background: #666;
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: 600;
-    }
-    
-    .cancel-btn:hover {
-      background: #777;
-    }
-    
-    .confirm-btn {
-      background: #c53030;
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: 600;
-    }
-    
-    .confirm-btn:hover {
-      background: #a02626;
-    }
-    
-    .confirm-btn:disabled {
-      background: #666;
-      cursor: not-allowed;
-    }
-    
-    /* Reset confirmation modal styling */
-    .confirmation-input {
-      margin: 16px 0;
-      text-align: left;
-    }
-    
-    .confirmation-input label {
-      display: block;
-      margin-bottom: 8px;
-      color: #e8eef7;
-      font-size: 14px;
-      font-weight: 600;
-    }
-    
-    .confirmation-input input {
-      width: 100%;
-      padding: 8px 12px;
-      background: #0b1220;
-      color: #e8eef7;
-      border: 2px solid #333;
-      border-radius: 6px;
-      font-size: 14px;
-      text-align: left;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-    }
-    
-    .confirmation-input input:focus {
-      outline: none;
-      border-color: #c53030;
-    }
-    
-    .danger-btn {
-      background: #dc2626;
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 12px;
-      font-weight: 600;
-    }
-    
-    .danger-btn:hover {
-      background: #b91c1c;
-    }
-    
-    .danger-btn:disabled {
-      background: #666;
-      cursor: not-allowed;
-    }
-    
-    /* Settings modal styling */
-    .settings-section {
-      margin: 20px 0;
-    }
-    
-    .settings-section h4 {
-      margin: 0 0 8px 0;
-      color: #f2a900;
-      font-size: 16px;
-    }
-    
-    .settings-section p {
-      margin: 0 0 16px 0;
-      color: #8aa0b6;
-      font-size: 13px;
-    }
-    
-    .settings-options {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    
-    .radio-option {
-      display: flex;
-      align-items: center;
-      cursor: pointer;
-      padding: 8px;
-      border-radius: 6px;
-      transition: background 0.2s;
-    }
-    
-    .radio-option:hover {
-      background: rgba(255, 255, 255, 0.05);
-    }
-    
-    .radio-option input[type="radio"] {
-      margin: 0 8px 0 0;
-      accent-color: #f2a900;
-    }
-    
-    .radio-label {
-      color: #e8eef7;
-      font-size: 14px;
-    }
-    
-    .settings-btn {
-      background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
-      color: #8aa0b6;
-      border: 1px solid #404040;
-      padding: 8px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    }
-    
-    .settings-btn:hover {
-      background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
-      color: #f2a900;
-      border-color: #f2a900;
-      transform: translateY(-1px);
-      box-shadow: 0 4px 8px rgba(242, 169, 0, 0.2);
-    }
-    
-    .settings-btn:active {
-      transform: translateY(0);
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    }
-    
-    .settings-btn svg {
-      transition: transform 0.3s ease;
-    }
-    
-    .settings-btn:hover svg {
-      transform: rotate(90deg);
-    }
-    
-    /* Modern dropdown styling */
-    .dropdown-container {
-      position: relative;
-      margin-top: 12px;
-    }
-    
-    .modern-dropdown {
-      width: 100%;
-      background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
-      color: #e8eef7;
-      border: 1px solid #404040;
-      border-radius: 8px;
-      padding: 12px 40px 12px 16px;
-      font-size: 14px;
-      cursor: pointer;
-      appearance: none;
-      -webkit-appearance: none;
-      -moz-appearance: none;
-      transition: all 0.3s ease;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    }
-    
-    .modern-dropdown:hover {
-      border-color: #f2a900;
-      box-shadow: 0 4px 8px rgba(242, 169, 0, 0.1);
-    }
-    
-    .modern-dropdown:focus {
-      outline: none;
-      border-color: #f2a900;
-      box-shadow: 0 0 0 3px rgba(242, 169, 0, 0.2);
-    }
-    
-    .modern-dropdown option {
-      background: #1a1a1a;
-      color: #e8eef7;
-      padding: 8px;
-    }
-    
-    .dropdown-arrow {
-      position: absolute;
-      right: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: #8aa0b6;
-      pointer-events: none;
-      transition: color 0.3s ease;
-    }
-    
-    .dropdown-container:hover .dropdown-arrow {
-      color: #f2a900;
-    }
-    
-    /* Settings action button styling */
-    .settings-action-btn {
-      width: 100%;
-      background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
-      color: #e8eef7;
-      border: 1px solid #404040;
-      border-radius: 8px;
-      padding: 12px 16px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      display: flex;
-      align-items: center;
-      justify-content: flex-start;
-      gap: 8px;
-      font-size: 14px;
-      font-weight: 500;
-      margin-top: 8px;
-    }
-    
-    .settings-action-btn:hover {
-      background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
-      border-color: #f2a900;
-      color: #f2a900;
-      transform: translateY(-1px);
-      box-shadow: 0 4px 8px rgba(242, 169, 0, 0.2);
-    }
-    
-    .settings-action-btn:active {
-      transform: translateY(0);
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    }
-    
-    .settings-action-btn svg {
-      transition: transform 0.3s ease;
-    }
-    
-    .settings-action-btn:hover svg {
-      transform: scale(1.1);
-    }
-    
-    /* Change PIN modal styling */
-    .change-pin-section {
-      margin: 20px 0;
-      text-align: center;
-    }
-    
-    .change-pin-section h4 {
-      margin: 0 0 12px 0;
-      color: #f2a900;
-      font-size: 16px;
-    }
-    
-    .change-pin-section .pin-input {
-      margin: 8px auto;
-      text-align: left;
-      text-indent: 0;
-      box-sizing: border-box;
-      display: block;
-    }
-    
-    .change-pin-section .pin-input::placeholder {
-      text-align: left;
-      letter-spacing: 8px;
-      opacity: 0.7;
-    }
-    
-    .change-pin-section .pin-dots {
-      margin: 8px 0 16px 0;
-    }
-    
-    /* In-app notification styling */
-    .notification {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: linear-gradient(135deg, #059669 0%, #047857 100%);
-      color: white;
-      border-radius: 8px;
-      padding: 12px 16px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-      z-index: 3000;
-      transform: translateX(100%);
-      transition: transform 0.3s ease;
-    }
-    
-    .notification.show {
-      transform: translateX(0);
-    }
-    
-    .notification-content {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    
-    .notification-icon {
-      font-size: 16px;
-      font-weight: bold;
-    }
-    
-    .notification-text {
-      font-size: 14px;
-      font-weight: 500;
-    }
-    
-    .notification.error {
-      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-    }
-  </style>
+  <link rel="stylesheet" href="css/popup.css">
 </head>
 <body>
   <div style="padding: 12px;">
@@ -727,7 +26,7 @@
         <span id="priceTime" class="muted"></span>
       </div>
       <div style="font-size: 20px; margin: 8px 0;">
-        <span id="price">—</span>
+        <span id="price">Loading...</span>
         <span id="priceChange" class="muted"></span>
       </div>
       <button id="refreshPriceBtn">Refresh</button>
@@ -791,7 +90,7 @@
           <div style="display: flex; gap: 4px; margin-left: auto;">
             <button id="toggleBtcBtn" class="unit-btn active">BTC</button>
             <button id="toggleSatsBtn" class="unit-btn">SATS</button>
-            <button id="toggleUsdBtn" class="unit-btn">USD</button>
+            <button id="toggleCurrencyBtn" class="unit-btn">USD</button>
           </div>
         </div>
       </div>
@@ -817,6 +116,10 @@
           <div class="pin-dot" id="pinDot6"></div>
         </div>
               <button id="unlockBtn" disabled>Unlock</button>
+              
+              <!-- PIN Attempt Warning -->
+              <div id="pinWarning" class="auth-warning" style="display: none; margin-top: 8px;">
+              </div>
             </div>
             
             <!-- Right Column: Warning & Reset -->
@@ -904,6 +207,89 @@
     <div id="settingsModal" class="modal-overlay" style="display: none;">
       <div class="modal-content">
         <h3>Settings</h3>
+        
+        <div class="settings-section">
+          <h4>Currency</h4>
+          <p>Select your preferred currency for price display and calculations.</p>
+          
+          <div class="dropdown-container">
+            <select id="currencySelect" class="modern-dropdown">
+              <option value="usd">🇺🇸 USD - US Dollar</option>
+              <option value="eur">🇪🇺 EUR - Euro</option>
+              <option value="gbp">🇬🇧 GBP - British Pound</option>
+              <option value="jpy">🇯🇵 JPY - Japanese Yen</option>
+              <option value="cad">🇨🇦 CAD - Canadian Dollar</option>
+              <option value="aud">🇦🇺 AUD - Australian Dollar</option>
+              <option value="chf">🇨🇭 CHF - Swiss Franc</option>
+              <option value="cny">🇨🇳 CNY - Chinese Yuan</option>
+              <option value="inr">🇮🇳 INR - Indian Rupee</option>
+              <option value="krw">🇰🇷 KRW - South Korean Won</option>
+              <option value="brl">🇧🇷 BRL - Brazilian Real</option>
+              <option value="mxn">🇲🇽 MXN - Mexican Peso</option>
+              <option value="rub">🇷🇺 RUB - Russian Ruble</option>
+              <option value="try">🇹🇷 TRY - Turkish Lira</option>
+              <option value="zar">🇿🇦 ZAR - South African Rand</option>
+              <option value="nzd">🇳🇿 NZD - New Zealand Dollar</option>
+              <option value="sek">🇸🇪 SEK - Swedish Krona</option>
+              <option value="nok">🇳🇴 NOK - Norwegian Krone</option>
+              <option value="dkk">🇩🇰 DKK - Danish Krone</option>
+              <option value="pln">🇵🇱 PLN - Polish Zloty</option>
+              <option value="czk">🇨🇿 CZK - Czech Koruna</option>
+              <option value="huf">🇭🇺 HUF - Hungarian Forint</option>
+              <option value="ils">🇮🇱 ILS - Israeli Shekel</option>
+              <option value="thb">🇹🇭 THB - Thai Baht</option>
+              <option value="sgd">🇸🇬 SGD - Singapore Dollar</option>
+              <option value="hkd">🇭🇰 HKD - Hong Kong Dollar</option>
+              <option value="twd">🇹🇼 TWD - Taiwan Dollar</option>
+              <option value="php">🇵🇭 PHP - Philippine Peso</option>
+              <option value="idr">🇮🇩 IDR - Indonesian Rupiah</option>
+              <option value="myr">🇲🇾 MYR - Malaysian Ringgit</option>
+              <option value="vnd">🇻🇳 VND - Vietnamese Dong</option>
+              <option value="bdt">🇧🇩 BDT - Bangladeshi Taka</option>
+              <option value="pkr">🇵🇰 PKR - Pakistani Rupee</option>
+              <option value="lkr">🇱🇰 LKR - Sri Lankan Rupee</option>
+              <option value="npr">🇳🇵 NPR - Nepalese Rupee</option>
+              <option value="bht">🇧🇹 BHT - Bhutanese Ngultrum</option>
+              <option value="mvr">🇲🇻 MVR - Maldivian Rufiyaa</option>
+              <option value="afn">🇦🇫 AFN - Afghan Afghani</option>
+              <option value="kzt">🇰🇿 KZT - Kazakhstani Tenge</option>
+              <option value="uzs">🇺🇿 UZS - Uzbekistani Som</option>
+              <option value="kgs">🇰🇬 KGS - Kyrgyzstani Som</option>
+              <option value="tjs">🇹🇯 TJS - Tajikistani Somoni</option>
+              <option value="tmt">🇹🇲 TMT - Turkmenistani Manat</option>
+              <option value="amd">🇦🇲 AMD - Armenian Dram</option>
+              <option value="azn">🇦🇿 AZN - Azerbaijani Manat</option>
+              <option value="gel">🇬🇪 GEL - Georgian Lari</option>
+              <option value="byn">🇧🇾 BYN - Belarusian Ruble</option>
+              <option value="mdl">🇲🇩 MDL - Moldovan Leu</option>
+              <option value="uah">🇺🇦 UAH - Ukrainian Hryvnia</option>
+              <option value="bgn">🇧🇬 BGN - Bulgarian Lev</option>
+              <option value="ron">🇷🇴 RON - Romanian Leu</option>
+              <option value="hrk">🇭🇷 HRK - Croatian Kuna</option>
+              <option value="rsd">🇷🇸 RSD - Serbian Dinar</option>
+              <option value="bam">🇧🇦 BAM - Bosnia-Herzegovina Mark</option>
+              <option value="mkd">🇲🇰 MKD - Macedonian Denar</option>
+              <option value="all">🇦🇱 ALL - Albanian Lek</option>
+              <option value="mnt">🇲🇳 MNT - Mongolian Tugrik</option>
+              <option value="khr">🇰🇭 KHR - Cambodian Riel</option>
+              <option value="lak">🇱🇦 LAK - Laotian Kip</option>
+              <option value="mmk">🇲🇲 MMK - Myanmar Kyat</option>
+              <option value="bob">🇧🇴 BOB - Bolivian Boliviano</option>
+              <option value="clp">🇨🇱 CLP - Chilean Peso</option>
+              <option value="cop">🇨🇴 COP - Colombian Peso</option>
+              <option value="pen">🇵🇪 PEN - Peruvian Sol</option>
+              <option value="uyu">🇺🇾 UYU - Uruguayan Peso</option>
+              <option value="pyg">🇵🇾 PYG - Paraguayan Guarani</option>
+              <option value="ars">🇦🇷 ARS - Argentine Peso</option>
+              <option value="vef">🇻🇪 VEF - Venezuelan Bolívar</option>
+            </select>
+            <div class="dropdown-arrow">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6,9 12,15 18,9"></polyline>
+              </svg>
+            </div>
+          </div>
+        </div>
         
         <div class="settings-section">
           <h4>Vault Timeout</h4>
@@ -999,6 +385,6 @@
     
   </div>
   
-  <script src="popup.js"></script>
+  <script type="module" src="js/BitcoinMini.js"></script>
 </body>
 </html>

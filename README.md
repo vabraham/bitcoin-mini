@@ -1,26 +1,83 @@
 # Bitcoin Mini Extension
 
-Simple Bitcoin price, fees, and address tracking. All data stays on your device.
+A simple, secure, and clean Bitcoin price tracker and address vault for your browser.
 
-## Install
+## Installation
 
-1. Open Chrome → `chrome://extensions/`
-2. Enable "Developer mode"
-3. Click "Load unpacked" → select this folder
-4. Click the extension icon in your toolbar
+### Chrome Web Store (Recommended)
+*Coming soon* - Extension is currently under review by Chrome Web Store.
+
+### Manual Installation (For Testing/Development)
+See the [Development](#development) section below for manual installation instructions.
 
 ## Features
 
-- **Bitcoin price** from CoinGecko
-- **Network fees** from mempool.space
-- **Address watchlist** with balance tracking
-- **Quantum exposure** analysis
-- **100% local** - no data sent to servers
+- **Real-time Bitcoin Price**: Live BTC price with USD, BTC, and SATS units
+- **Secure Address Vault**: Store and track Bitcoin addresses with optional PIN protection
+- **Network Fee Tracking**: Monitor current network fees from multiple sources
+- **Cross-browser Support**: Works on Chrome, Firefox, and other Chromium-based browsers
+- **Privacy-focused**: All data stored locally, no external tracking
 
-## Files
+## Security Features
 
-- `manifest.json` - Extension config
-- `popup.html` - UI
-- `popup.js` - Logic
+- **Optional PIN Protection**: Secure your address vault with a 4-6 digit PIN
+- **PIN Rate Limiting**: 5 attempts before 5-minute lockout for security
+- **Vault Timeout Options**: 
+  - Never (manual lock only)
+  - On Extension Open
+  - On Browser Restart
+  - On System Lock
+  - Time-based (1, 5, 15, 30, 60 minutes)
+- **Local Storage**: All data stored locally in your browser
+- **No External Dependencies**: Works offline after initial load
 
-That's it! Simple and clean.
+## Installation
+
+
+## Usage
+
+1. **View Bitcoin Price**: The extension shows live BTC price on load
+2. **Add Addresses**: Click "Add Address" to store Bitcoin addresses
+3. **Secure Vault**: Set up a PIN to protect your addresses
+4. **Track Fees**: Monitor network fees from multiple sources
+5. **Change Settings**: Click the settings icon to customize vault timeout
+
+## Contributing
+
+Found a bug or have a feature idea? Please [open an issue](https://github.com/bitcoin-mini/extension/issues) on GitHub!
+
+Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+
+## Privacy
+
+- No data is sent to external servers except for price and fee data
+- All addresses and PINs are stored locally in your browser
+- No tracking or analytics
+- Open source and auditable
+
+## Browser Compatibility
+
+- Chrome 88+
+- Firefox 109+
+- Edge 88+
+- Other Chromium-based browsers
+
+## Development
+
+Built with vanilla JavaScript, HTML, and CSS. No external dependencies.
+
+### Manual Installation for Development
+1. Download or clone this repository
+2. Go to `chrome://extensions/` in Chrome
+3. Enable "Developer mode"
+4. Click "Load unpacked" and select the `extension` folder
+
+### Firefox Development
+1. Go to `about:debugging` in Firefox
+2. Click "This Firefox"
+3. Click "Load Temporary Add-on"
+4. Select the `manifest.json` file from the `extension` folder
+
+## License
+
+MIT License - see [LICENSE](LICENSE) file for details

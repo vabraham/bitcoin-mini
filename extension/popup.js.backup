@@ -12,6 +12,44 @@ class BitcoinMini {
     this.vaultTimeout = 'never'; // Default for existing users, will be set to 'extension_open' when PIN is first created
     this.lastActivity = Date.now();
     this.timeoutId = null;
+    this.currency = 'usd'; // Default currency
+    this.currencySymbols = {
+      'usd': '$', 'eur': '€', 'gbp': '£', 'jpy': '¥', 'cad': 'C$',
+      'aud': 'A$', 'chf': 'CHF', 'cny': '¥', 'inr': '₹', 'krw': '₩',
+      'brl': 'R$', 'mxn': '$', 'rub': '₽', 'try': '₺', 'zar': 'R',
+      'nzd': 'NZ$', 'sek': 'kr', 'nok': 'kr', 'dkk': 'kr', 'pln': 'zł',
+      'czk': 'Kč', 'huf': 'Ft', 'ils': '₪', 'thb': '฿', 'sgd': 'S$',
+      'hkd': 'HK$', 'twd': 'NT$', 'php': '₱', 'idr': 'Rp', 'myr': 'RM',
+      'vnd': '₫', 'bdt': '৳', 'pkr': '₨', 'lkr': '₨', 'npr': '₨',
+      'bht': 'Nu', 'mvr': 'Rf', 'afn': '؋', 'kzt': '₸', 'uzs': 'som',
+      'kgs': 'с', 'tjs': 'SM', 'tmt': 'T', 'amd': '֏', 'azn': '₼',
+      'gel': '₾', 'byn': 'Br', 'mdl': 'L', 'uah': '₴', 'bgn': 'лв',
+      'ron': 'lei', 'hrk': 'kn', 'rsd': 'дин', 'bam': 'КМ', 'mkd': 'ден',
+      'all': 'L', 'mnt': '₮', 'khr': '៛', 'lak': '₭', 'mmk': 'K',
+      'bob': 'Bs', 'clp': '$', 'cop': '$', 'pen': 'S/', 'uyu': '$U',
+      'pyg': '₲', 'ars': '$', 'vef': 'Bs.S'
+    };
+    
+    // Rate limiting and caching
+    this.lastPriceUpdate = 0;
+    this.lastFeesUpdate = 0;
+    this.priceCache = null;
+    this.feesCache = null;
+    this.cacheTimeout = 60000; // 1 minute cache
+    this.minUpdateInterval = 30000; // Minimum 30 seconds between updates
+    this.rateLimitDelay = 60000; // 1 minute delay after rate limit
+    this.isRateLimited = false;
+    this.retryCount = 0;
+    this.maxRetries = 2; // Reduced from 3
+    
+    // PIN attempt limiting
+    this.maxPinAttempts = 5; // Maximum PIN attempts before lockout
+    this.pinAttempts = 0; // Current number of failed attempts
+    this.pinLockoutDuration = 300000; // 5 minutes lockout after max attempts
+    this.pinLockoutUntil = 0; // Timestamp when lockout expires
+    
+    // Currency switching handled on Save (no special variables needed)
+    
     this.init();
   }
   
@@ -19,6 +57,11 @@ class BitcoinMini {
     console.log('BitcoinMini init() called');
     // Load data first to get current vault timeout setting
     await this.loadData();
+    
+    // Load PIN attempt state
+    const pinData = await browser.storage.local.get(['pinAttempts', 'pinLockoutUntil']);
+    this.pinAttempts = pinData.pinAttempts || 0;
+    this.pinLockoutUntil = pinData.pinLockoutUntil || 0;
     
     // Handle "On Extension Open" timeout BEFORE setting UI state
     if (this.vaultTimeout === 'extension_open') {
@@ -33,9 +76,24 @@ class BitcoinMini {
     await this.initAddressSection();
     
     this.bindEvents();
-    await this.refreshPrice();
-    await this.refreshFees();
+    
+    // Update PIN attempt display
+    this.updatePinAttemptDisplay();
+    
+    // Start periodic update for PIN attempt display (for countdown timers)
+    this.startPinDisplayUpdater();
+    
+    // Only refresh data if not rate limited and cache is stale
+    if (!this.isRateLimited) {
+      await this.refreshPriceIfNeeded();
+      await this.refreshFeesIfNeeded();
+    } else {
+      // Show cached data if available
+      this.displayCachedData();
+    }
+    
     this.renderWatchlist();
+    this.updateCurrencyToggle();
     
     // Start timeout for other options (not needed for extension_open)
     if (this.vaultTimeout !== 'extension_open') {
@@ -45,21 +103,41 @@ class BitcoinMini {
   
   // Storage
   async loadData() {
-    const result = await browser.storage.local.get(['watchlist', 'unit', 'vaultTimeout']);
+    const result = await browser.storage.local.get(['watchlist', 'unit', 'vaultTimeout', 'currency']);
     this.watchlist = result.watchlist || [];
     this.unit = result.unit || 'BTC';
     this.vaultTimeout = result.vaultTimeout || 'never';
+    this.currency = result.currency || 'usd';
   }
   
   async saveData() {
     await browser.storage.local.set({
       watchlist: this.watchlist,
       unit: this.unit,
-      vaultTimeout: this.vaultTimeout
+      vaultTimeout: this.vaultTimeout,
+      currency: this.currency
     });
   }
   
   // Events
+  // Conservative visibility change listener - only refresh if cache is very stale
+  setupVisibilityListener() {
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        // Only refresh if cache is older than 5 minutes and not rate limited
+        const now = Date.now();
+        const priceAge = now - this.lastPriceUpdate;
+        const feesAge = now - this.lastFeesUpdate;
+        
+        if (!this.isRateLimited && (priceAge > 300000 || feesAge > 300000)) {
+          console.log('Extension became visible, cache is stale, refreshing...');
+          this.refreshPriceIfNeeded();
+          this.refreshFeesIfNeeded();
+        }
+      }
+    });
+  }
+
   bindEvents() {
     console.log('bindEvents() called - setting up event listeners');
     
@@ -74,14 +152,14 @@ class BitcoinMini {
     const addWatchBtn = document.getElementById('addWatchBtn');
     const toggleBtcBtn = document.getElementById('toggleBtcBtn');
     const toggleSatsBtn = document.getElementById('toggleSatsBtn');
-    const toggleUsdBtn = document.getElementById('toggleUsdBtn');
+    const toggleCurrencyBtn = document.getElementById('toggleCurrencyBtn');
     
     if (refreshPriceBtn) {
       console.log('Refresh price button found, adding click handler');
       refreshPriceBtn.onclick = () => {
         console.log('Refresh price button clicked!');
         this.trackActivity();
-        this.refreshPrice();
+        this.refreshPriceIfNeeded(true); // Force refresh on manual click
       };
     } else {
       console.log('Refresh price button NOT found');
@@ -90,7 +168,7 @@ class BitcoinMini {
     if (refreshFeesBtn) {
       refreshFeesBtn.onclick = () => {
         this.trackActivity();
-        this.refreshFees();
+        this.refreshFeesIfNeeded(true); // Force refresh on manual click
       };
     }
     
@@ -115,8 +193,8 @@ class BitcoinMini {
       };
     }
     
-    if (toggleUsdBtn) {
-      toggleUsdBtn.onclick = () => {
+    if (toggleCurrencyBtn) {
+      toggleCurrencyBtn.onclick = () => {
         this.trackActivity();
         this.setUnit('USD');
       };
@@ -238,6 +316,9 @@ class BitcoinMini {
     const pinInput = document.getElementById('pinInput');
     if (pinInput) {
       pinInput.addEventListener('input', (e) => {
+        // Check if input is disabled due to rate limiting
+        if (e.target.disabled) return;
+        
         // Allow any input during typing, but filter to numbers only
         let value = e.target.value;
         // Remove non-numeric characters
@@ -253,11 +334,14 @@ class BitcoinMini {
     const unlockBtn = document.getElementById('unlockBtn');
     if (unlockBtn) {
       unlockBtn.addEventListener('click', async () => {
+        // Check if button is disabled due to rate limiting
+        if (unlockBtn.disabled) return;
+        
         const pinInput = document.getElementById('pinInput');
         const pin = pinInput ? pinInput.value : '';
         const success = await this.unlockPin(pin);
         if (!success) {
-          this.showNotification('Invalid PIN. Please try again.', 'error');
+          // Clear PIN input on failure
           if (pinInput) {
             pinInput.value = '';
             this.updatePinDots('pinInput', 'pinDot');
@@ -281,7 +365,7 @@ class BitcoinMini {
           const pin = pinInput.value;
           const success = await this.unlockPin(pin);
           if (!success) {
-            this.showNotification('Invalid PIN. Please try again.', 'error');
+            // Clear PIN input on failure
             pinInput.value = '';
             this.updatePinDots('pinInput', 'pinDot');
           }
@@ -452,8 +536,12 @@ class BitcoinMini {
         await this.changePin();
       }
     });
+    
+    // Currency change handler - no special handling needed, just like vault timeout
+    // Currency changes are handled on Save button click
   }
   
+
   // Centralized API Error Handling
   categorizeAPIError(response, error) {
     if (!response) return 'network';
@@ -469,8 +557,16 @@ class BitcoinMini {
   }
   
   getRetryDelay(attempt, errorType) {
-    if (errorType === 'rate_limit') return 5000; // 5s for rate limits
-    return Math.min(1000 * Math.pow(2, attempt), 10000); // Exponential backoff, max 10s
+    if (errorType === 'rate_limit') {
+      this.isRateLimited = true;
+      // Set a longer delay for rate limits and clear it after delay
+      setTimeout(() => {
+        this.isRateLimited = false;
+        this.retryCount = 0;
+      }, this.rateLimitDelay);
+      return this.rateLimitDelay; // 1 minute for rate limits
+    }
+    return Math.min(2000 * Math.pow(2, attempt), 30000); // Exponential backoff, max 30s
   }
   
   async fetchWithRetry(url, options = {}, maxRetries = 3) {
@@ -503,60 +599,293 @@ class BitcoinMini {
     }
   }
   
+  // Rate-limited API calls with caching
+  async refreshPriceIfNeeded(force = false) {
+    const now = Date.now();
+    const timeSinceLastUpdate = now - this.lastPriceUpdate;
+    
+    // Check if we should skip this update
+    if (!force && !this.isRateLimited && timeSinceLastUpdate < this.minUpdateInterval) {
+      console.log('Skipping price update - too soon since last update');
+      return;
+    }
+    
+    if (this.isRateLimited) {
+      console.log('Skipping price update - rate limited');
+      this.displayCachedData();
+      return;
+    }
+    
+    // Check cache first
+    if (!force && this.priceCache && (now - this.priceCache.timestamp) < this.cacheTimeout) {
+      console.log('Using cached price data');
+      this.displayPriceData(this.priceCache.data);
+      return;
+    }
+    
+    await this.refreshPrice();
+  }
+  
+  async refreshFeesIfNeeded(force = false) {
+    const now = Date.now();
+    const timeSinceLastUpdate = now - this.lastFeesUpdate;
+    
+    // Check if we should skip this update
+    if (!force && !this.isRateLimited && timeSinceLastUpdate < this.minUpdateInterval) {
+      console.log('Skipping fees update - too soon since last update');
+      return;
+    }
+    
+    if (this.isRateLimited) {
+      console.log('Skipping fees update - rate limited');
+      this.displayCachedData();
+      return;
+    }
+    
+    // Check cache first
+    if (!force && this.feesCache && (now - this.feesCache.timestamp) < this.cacheTimeout) {
+      console.log('Using cached fees data');
+      this.displayFeesData(this.feesCache.data);
+      return;
+    }
+    
+    await this.refreshFees();
+  }
+  
+  displayCachedData() {
+    if (this.priceCache) {
+      this.displayPriceData(this.priceCache.data);
+    }
+    if (this.feesCache) {
+      this.displayFeesData(this.feesCache.data);
+    }
+  }
+  
+  displayPriceData(data) {
+    const priceEl = document.getElementById('price');
+    const changeEl = document.getElementById('priceChange');
+    const timeEl = document.getElementById('priceTime');
+    
+    if (priceEl) priceEl.textContent = data.price;
+    if (changeEl) {
+      changeEl.textContent = data.change;
+      changeEl.className = data.changeClass;
+    }
+    if (timeEl) timeEl.textContent = data.time;
+  }
+  
+  displayFeesData(data) {
+    const feeFastEl = document.getElementById('fee_fast');
+    const feeHourEl = document.getElementById('fee_hour');
+    const feeEconEl = document.getElementById('fee_econ');
+    const feeTimeEl = document.getElementById('feeTime');
+    
+    if (feeFastEl) feeFastEl.textContent = data.fastestFee;
+    if (feeHourEl) feeHourEl.textContent = data.hourFee;
+    if (feeEconEl) feeEconEl.textContent = data.economyFee;
+    if (feeTimeEl) feeTimeEl.textContent = data.time;
+    
+    // Categorize fees
+    this.categorizeFee('fee_fast', data.fastestFee);
+    this.categorizeFee('fee_hour', data.hourFee);
+    this.categorizeFee('fee_econ', data.economyFee);
+  }
+
   // API Calls
   async refreshPrice() {
+    // Show loading state immediately with null checks
+    const priceEl = document.getElementById('price');
+    const changeEl = document.getElementById('priceChange');
+    const timeEl = document.getElementById('priceTime');
+    
+    if (priceEl) priceEl.textContent = 'Loading...';
+    if (changeEl) changeEl.textContent = '';
+    if (timeEl) timeEl.textContent = '';
+    
     try {
-      // Fetch current price and historical data in parallel
+      // Validate currency before making API calls
+      if (!this.currency || typeof this.currency !== 'string') {
+        console.error('Invalid currency:', this.currency);
+        throw new Error('Invalid currency');
+      }
+      
+      // Fetch current price and historical data in parallel with error handling
       const [currentResponse, historicalResponse] = await Promise.all([
-        fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd', {
+        fetch(`https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=${this.currency}`, {
           headers: { 'User-Agent': 'BitcoinMini-Extension/1.0' }
+        }).catch(error => {
+          console.error('Current price API fetch failed:', error);
+          throw error;
         }),
-        fetch('https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=365&interval=daily', {
+        fetch(`https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=${this.currency}&days=365&interval=daily`, {
           headers: { 'User-Agent': 'BitcoinMini-Extension/1.0' }
+        }).catch(error => {
+          console.error('Historical price API fetch failed:', error);
+          throw error;
         })
       ]);
       
-      const currentData = await currentResponse.json();
-      const historicalData = await historicalResponse.json();
+      // Check response status
+      if (!currentResponse.ok) {
+        throw new Error(`Current price API error: ${currentResponse.status} ${currentResponse.statusText}`);
+      }
+      if (!historicalResponse.ok) {
+        throw new Error(`Historical price API error: ${historicalResponse.status} ${historicalResponse.statusText}`);
+      }
       
-      if (currentData?.bitcoin?.usd && historicalData?.prices) {
-        this.currentBtcPrice = currentData.bitcoin.usd;
-        const currentPrice = currentData.bitcoin.usd;
+      // Parse JSON with error handling
+      let currentData, historicalData;
+      try {
+        currentData = await currentResponse.json();
+        historicalData = await historicalResponse.json();
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError);
+        throw new Error('Invalid JSON response from API');
+      }
+      
+      // Validate data structure with comprehensive checks
+      if (!currentData || typeof currentData !== 'object') {
+        console.error('Invalid current data structure:', currentData);
+        throw new Error('Invalid current data structure');
+      }
+      
+      if (!historicalData || typeof historicalData !== 'object') {
+        console.error('Invalid historical data structure:', historicalData);
+        throw new Error('Invalid historical data structure');
+      }
+      
+      // Safe logging with null checks
+      console.log('Price API response for currency:', this.currency);
+      console.log('Current data available:', !!currentData);
+      console.log('Historical data available:', !!historicalData);
+      console.log('Current price exists:', !!(currentData && currentData.bitcoin && currentData.bitcoin[this.currency]));
+      console.log('Historical prices exist:', !!(historicalData && historicalData.prices && Array.isArray(historicalData.prices)));
+      
+      // Check for valid data with comprehensive validation
+      const hasCurrentPrice = currentData && 
+                             currentData.bitcoin && 
+                             typeof currentData.bitcoin === 'object' && 
+                             currentData.bitcoin[this.currency] !== undefined && 
+                             currentData.bitcoin[this.currency] !== null &&
+                             typeof currentData.bitcoin[this.currency] === 'number' &&
+                             currentData.bitcoin[this.currency] > 0;
+      
+      const hasHistoricalPrices = historicalData && 
+                                 historicalData.prices && 
+                                 Array.isArray(historicalData.prices) && 
+                                 historicalData.prices.length > 0 &&
+                                 historicalData.prices[0] && 
+                                 Array.isArray(historicalData.prices[0]) &&
+                                 historicalData.prices[0].length >= 2 &&
+                                 typeof historicalData.prices[0][1] === 'number' &&
+                                 historicalData.prices[0][1] > 0;
+      
+      if (hasCurrentPrice && hasHistoricalPrices) {
+        try {
+          this.currentBtcPrice = currentData.bitcoin[this.currency];
+          const currentPrice = this.currentBtcPrice;
+          const symbol = this.currencySymbols[this.currency] || this.currency.toUpperCase();
+          
+          // Get price from 365 days ago with validation
+          const prices = historicalData.prices;
+          const priceOneYearAgo = prices[0][1];
+          
+          // Validate price values
+          if (typeof currentPrice !== 'number' || currentPrice <= 0) {
+            throw new Error('Invalid current price value');
+          }
+          if (typeof priceOneYearAgo !== 'number' || priceOneYearAgo <= 0) {
+            throw new Error('Invalid historical price value');
+          }
+          
+          // Calculate YoY change with error handling
+          const yoyChange = ((currentPrice - priceOneYearAgo) / priceOneYearAgo) * 100;
+          
+          // Display price with null checks
+          const priceText = `${symbol}${currentPrice.toLocaleString()}`;
+          if (priceEl) priceEl.textContent = priceText;
+          
+          // Display YoY change with color coding and null checks
+          let changeText, changeClass;
+          if (yoyChange > 0.01) {
+            changeText = `+${yoyChange.toFixed(2)}% YoY`;
+            changeClass = 'price-up';
+          } else if (yoyChange < -0.01) {
+            changeText = `${yoyChange.toFixed(2)}% YoY`;
+            changeClass = 'price-down';
+          } else {
+            changeText = `${yoyChange.toFixed(2)}% YoY`;
+            changeClass = 'price-neutral';
+          }
+          
+          if (changeEl) {
+            changeEl.textContent = changeText;
+            changeEl.className = changeClass;
+          }
+          
+          const timeText = new Date().toLocaleTimeString();
+          if (timeEl) timeEl.textContent = timeText;
+          
+          // Cache the data
+          this.lastPriceUpdate = Date.now();
+          this.priceCache = {
+            timestamp: this.lastPriceUpdate,
+            data: {
+              price: priceText,
+              change: changeText,
+              changeClass: changeClass,
+              time: timeText
+            }
+          };
+        } catch (displayError) {
+          console.error('Error displaying price data:', displayError);
+          throw displayError;
+        }
+      } else {
+        // Handle case where data is missing with detailed logging
+        console.warn('Price data missing for currency:', this.currency);
+        console.warn('Current data available:', !!currentData);
+        console.warn('Historical data available:', !!historicalData);
+        console.warn('Current price exists:', hasCurrentPrice);
+        console.warn('Historical prices exist:', hasHistoricalPrices);
         
-        // Get price from 365 days ago (first item in the array)
-        const prices = historicalData.prices;
-        const priceOneYearAgo = prices[0][1]; // [timestamp, price] - first item is oldest
-        
-        // Calculate YoY change: (current - old) / old * 100
-        const yoyChange = ((currentPrice - priceOneYearAgo) / priceOneYearAgo) * 100;
-        
-        // Display price
-        document.getElementById('price').textContent = `$${currentPrice.toLocaleString()}`;
-        
-        // Display YoY change with color coding
-        const changeEl = document.getElementById('priceChange');
-        if (yoyChange > 0.01) { // Only green if more than 0.01%
-          changeEl.textContent = `+${yoyChange.toFixed(2)}% YoY`;
-          changeEl.className = 'price-up';
-        } else if (yoyChange < -0.01) { // Only red if less than -0.01%
-          changeEl.textContent = `${yoyChange.toFixed(2)}% YoY`;
-          changeEl.className = 'price-down';
-        } else { // White for essentially no change
-          changeEl.textContent = `${yoyChange.toFixed(2)}% YoY`;
-          changeEl.className = 'price-neutral';
+        // Determine specific error message
+        let errorMessage = 'Unable to fetch';
+        if (!currentData || !currentData.bitcoin) {
+          errorMessage = 'No Bitcoin data';
+        } else if (!currentData.bitcoin[this.currency]) {
+          errorMessage = `No ${this.currency.toUpperCase()} data`;
+        } else if (!historicalData || !historicalData.prices) {
+          errorMessage = 'No historical data';
+        } else if (!Array.isArray(historicalData.prices) || historicalData.prices.length === 0) {
+          errorMessage = 'Empty historical data';
         }
         
-        document.getElementById('priceTime').textContent = new Date().toLocaleTimeString();
+        if (priceEl) priceEl.textContent = 'No Data';
+        if (changeEl) {
+          changeEl.textContent = errorMessage;
+          changeEl.className = 'price-muted';
+        }
+        if (timeEl) timeEl.textContent = new Date().toLocaleTimeString();
+        
+        // Don't auto-retry for missing data - let user manually refresh
+        console.log('Data missing - user can manually refresh if needed');
       }
     } catch (error) {
       console.error('Price fetch error:', error);
-      document.getElementById('price').textContent = 'API Error';
-      document.getElementById('priceChange').textContent = 'Retry in progress...';
+      if (priceEl) priceEl.textContent = 'API Error';
+      if (changeEl) {
+        if (error.message && error.message.includes('429')) {
+          changeEl.textContent = 'Rate limited - try again later';
+        } else {
+          changeEl.textContent = 'Connection failed - try refresh';
+        }
+        changeEl.className = 'price-muted';
+      }
+      if (timeEl) timeEl.textContent = new Date().toLocaleTimeString();
       
-      // Auto-retry after 5 seconds
-      setTimeout(() => {
-        this.refreshPrice();
-      }, 5000);
+      // Don't auto-retry on errors - respect rate limits
+      console.log('Price fetch failed - not retrying automatically to avoid rate limits');
     }
   }
   
@@ -565,35 +894,75 @@ class BitcoinMini {
       const response = await fetch('https://mempool.space/api/v1/fees/recommended', {
         headers: { 'User-Agent': 'BitcoinMini-Extension/1.0' }
       });
-      const data = await response.json();
-      if (data) {
-        document.getElementById('fee_fast').textContent = data.fastestFee ? parseFloat(data.fastestFee).toFixed(1) : '—';
-        document.getElementById('fee_hour').textContent = data.hourFee ? parseFloat(data.hourFee).toFixed(1) : '—';
-        document.getElementById('fee_econ').textContent = data.economyFee ? parseFloat(data.economyFee).toFixed(1) : '—';
-        document.getElementById('feeTime').textContent = new Date().toLocaleTimeString();
-        
-        // Categorize fees
-        this.categorizeFee('fee_fast', data.fastestFee);
-        this.categorizeFee('fee_hour', data.hourFee);
-        this.categorizeFee('fee_econ', data.economyFee);
+      
+      if (!response.ok) {
+        throw new Error(`Fees API error: ${response.status} ${response.statusText}`);
       }
+      
+      const data = await response.json();
+      
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid fees data structure');
+      }
+      
+      // Update fees with null checks
+      const feeFastEl = document.getElementById('fee_fast');
+      const feeHourEl = document.getElementById('fee_hour');
+      const feeEconEl = document.getElementById('fee_econ');
+      const feeTimeEl = document.getElementById('feeTime');
+      
+      const fastestFeeText = data.fastestFee ? parseFloat(data.fastestFee).toFixed(1) : '—';
+      const hourFeeText = data.hourFee ? parseFloat(data.hourFee).toFixed(1) : '—';
+      const econFeeText = data.economyFee ? parseFloat(data.economyFee).toFixed(1) : '—';
+      const timeText = new Date().toLocaleTimeString();
+      
+      if (feeFastEl) feeFastEl.textContent = fastestFeeText;
+      if (feeHourEl) feeHourEl.textContent = hourFeeText;
+      if (feeEconEl) feeEconEl.textContent = econFeeText;
+      if (feeTimeEl) feeTimeEl.textContent = timeText;
+      
+      // Categorize fees with null checks
+      this.categorizeFee('fee_fast', data.fastestFee);
+      this.categorizeFee('fee_hour', data.hourFee);
+      this.categorizeFee('fee_econ', data.economyFee);
+      
+      // Cache the data
+      this.lastFeesUpdate = Date.now();
+      this.feesCache = {
+        timestamp: this.lastFeesUpdate,
+        data: {
+          fastestFee: fastestFeeText,
+          hourFee: hourFeeText,
+          economyFee: econFeeText,
+          time: timeText
+        }
+      };
     } catch (error) {
       console.error('Fees error:', error);
-      // Show error state for fees
-      document.getElementById('fee_fast').textContent = 'Error';
-      document.getElementById('fee_hour').textContent = 'Error';
-      document.getElementById('fee_econ').textContent = 'Error';
-      document.getElementById('feeTime').textContent = 'Retrying...';
       
-      // Auto-retry after 5 seconds
-      setTimeout(() => {
-        this.refreshFees();
-      }, 5000);
+      // Show error state for fees with null checks
+      const feeFastEl = document.getElementById('fee_fast');
+      const feeHourEl = document.getElementById('fee_hour');
+      const feeEconEl = document.getElementById('fee_econ');
+      const feeTimeEl = document.getElementById('feeTime');
+      
+      if (feeFastEl) feeFastEl.textContent = 'Error';
+      if (feeHourEl) feeHourEl.textContent = 'Error';
+      if (feeEconEl) feeEconEl.textContent = 'Error';
+      if (feeTimeEl) feeTimeEl.textContent = 'Connection failed';
+      
+      // Don't auto-retry on errors - respect rate limits
+      console.log('Fees fetch failed - not retrying automatically to avoid rate limits');
     }
   }
   
   categorizeFee(elementId, fee) {
     const categoryElement = document.getElementById(elementId + '_category');
+    if (!categoryElement) {
+      console.warn('Category element not found for:', elementId);
+      return;
+    }
+    
     if (!fee || fee === '—') {
       categoryElement.textContent = '—';
       categoryElement.className = 'fee-category';
@@ -601,6 +970,12 @@ class BitcoinMini {
     }
     
     const feeValue = parseFloat(fee);
+    if (isNaN(feeValue)) {
+      categoryElement.textContent = '—';
+      categoryElement.className = 'fee-category';
+      return;
+    }
+    
     if (feeValue < 5) {
       categoryElement.textContent = 'Very Low';
       categoryElement.className = 'fee-category fee-very-low';
@@ -1085,8 +1460,9 @@ class BitcoinMini {
     } else if (this.unit === 'SATS') {
       return Math.floor((btc || 0) * 1e8).toLocaleString();
     } else if (this.unit === 'USD') {
-      const usdValue = (btc || 0) * (this.currentBtcPrice || 0);
-      return '$' + usdValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const value = (btc || 0) * (this.currentBtcPrice || 0);
+      const symbol = this.currencySymbols[this.currency] || this.currency.toUpperCase();
+      return symbol + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
     return (btc || 0).toFixed(8);
   }
@@ -1108,12 +1484,20 @@ class BitcoinMini {
     this.saveData();
     this.renderWatchlist();
     this.updateToggleButtons();
+    this.updateCurrencyToggle();
   }
 
   updateToggleButtons() {
     document.querySelectorAll('.unit-btn').forEach(btn => btn.classList.remove('active'));
     const activeBtn = document.getElementById(`toggle${this.unit}Btn`);
     if (activeBtn) activeBtn.classList.add('active');
+  }
+
+  updateCurrencyToggle() {
+    const toggleCurrencyBtn = document.getElementById('toggleCurrencyBtn');
+    if (toggleCurrencyBtn) {
+      toggleCurrencyBtn.textContent = this.currency.toUpperCase();
+    }
   }
 
   // Address section initialization
@@ -1150,6 +1534,11 @@ class BitcoinMini {
     // Clear PIN input when locking
     document.getElementById('pinInput').value = '';
     this.updatePinDots('pinInput', 'pinDot');
+    
+    // Reset PIN attempts when locking (fresh start)
+    this.pinAttempts = 0;
+    this.pinLockoutUntil = 0;
+    this.updatePinAttemptDisplay();
   }
 
   showPinEntry() {
@@ -1206,16 +1595,54 @@ class BitcoinMini {
     if (dropdown) {
       dropdown.value = this.vaultTimeout;
     }
+    
+    // Set the current currency setting
+    const currencyDropdown = document.getElementById('currencySelect');
+    if (currencyDropdown) {
+      currencyDropdown.value = this.currency;
+    }
   }
 
   async saveSettings() {
     const dropdown = document.getElementById('vaultTimeoutSelect');
+    const currencyDropdown = document.getElementById('currencySelect');
+    
+    let needsRefresh = false;
+    
     if (dropdown) {
       this.vaultTimeout = dropdown.value;
-      await this.saveData();
-      this.hideSettingsModal();
-      this.startVaultTimeout();
     }
+    
+    // Handle currency change
+    if (currencyDropdown && currencyDropdown.value !== this.currency) {
+      const newCurrency = currencyDropdown.value;
+      
+      // Check if we're rate limited
+      if (this.isRateLimited) {
+        this.showNotification('Rate limited - please wait before changing currency', 'error');
+        return;
+      }
+      
+      // Update currency
+      this.currency = newCurrency;
+      needsRefresh = true;
+      
+      // Clear cache for new currency
+      this.priceCache = null;
+      this.feesCache = null;
+    }
+    
+    await this.saveData();
+    this.hideSettingsModal();
+    this.startVaultTimeout();
+    
+    // Refresh if currency changed
+    if (needsRefresh) {
+      await this.refreshPriceIfNeeded(true);
+    }
+    
+    this.renderWatchlist();
+    this.updateCurrencyToggle();
   }
 
   showChangePinModal() {
@@ -1361,29 +1788,81 @@ class BitcoinMini {
     this.showAddressSection();
     
     // Refresh price data to ensure USD values work correctly
-    await this.refreshPrice();
+    await this.refreshPriceIfNeeded(true); // Force refresh for PIN setup
     this.renderWatchlist();
   }
 
   async unlockPin(pin) {
+    // Check if currently locked out
+    const now = Date.now();
+    if (this.pinLockoutUntil > now) {
+      const remainingTime = Math.ceil((this.pinLockoutUntil - now) / 1000);
+      this.showNotification(`Too many failed attempts. Please wait ${remainingTime} seconds before trying again.`, 'error');
+      return false;
+    }
+    
     const authData = await browser.storage.local.get(['pin']);
     const hashedPin = await this.hashPin(pin);
     
     if (hashedPin === authData.pin) {
-      await browser.storage.local.set({ isLocked: false });
+      // Successful unlock - reset attempt counter
+      this.pinAttempts = 0;
+      this.pinLockoutUntil = 0;
+      
+      // Persist the reset state
+      await browser.storage.local.set({ 
+        isLocked: false,
+        pinAttempts: 0,
+        pinLockoutUntil: 0
+      });
       this.showAddressSection();
       
       // Refresh price data to ensure USD values work correctly
-      await this.refreshPrice();
+      await this.refreshPriceIfNeeded(true); // Force refresh for PIN unlock
       this.renderWatchlist();
       
       // Clear PIN input after successful unlock
       document.getElementById('pinInput').value = '';
       this.updatePinDots('pinInput', 'pinDot');
       
+      // Update UI to show successful unlock
+      this.updatePinAttemptDisplay();
+      
+      // Clear display updater since we're unlocked
+      if (this.pinDisplayUpdater) {
+        clearInterval(this.pinDisplayUpdater);
+        this.pinDisplayUpdater = null;
+      }
+      
       return true;
+    } else {
+      // Failed attempt - increment counter
+      this.pinAttempts++;
+      
+      // Check if we've reached max attempts
+      if (this.pinAttempts >= this.maxPinAttempts) {
+        this.pinLockoutUntil = now + this.pinLockoutDuration;
+        this.showNotification(`Too many failed attempts. Locked out for ${this.pinLockoutDuration / 60000} minutes.`, 'error');
+      } else {
+        this.showNotification(`Invalid PIN. ${this.maxPinAttempts - this.pinAttempts} attempts remaining.`, 'error');
+      }
+      
+      // Persist the attempt state
+      await browser.storage.local.set({
+        pinAttempts: this.pinAttempts,
+        pinLockoutUntil: this.pinLockoutUntil
+      });
+      
+      // Update UI to show remaining attempts
+      this.updatePinAttemptDisplay();
+      
+      // Start display updater if locked out
+      if (this.pinLockoutUntil > now) {
+        this.startPinDisplayUpdater();
+      }
+      
+      return false;
     }
-    return false;
   }
 
   async resetAllData() {
@@ -1392,7 +1871,7 @@ class BitcoinMini {
     this.showAddressSection();
     
     // Refresh price data and render empty watchlist
-    await this.refreshPrice();
+    await this.refreshPriceIfNeeded(true); // Force refresh for data reset
     this.renderWatchlist();
   }
 
@@ -1437,6 +1916,63 @@ class BitcoinMini {
         button.disabled = !(value.length >= 4 && value.length <= 6 && /^\d+$/.test(value));
       }
     }
+  }
+
+  updatePinAttemptDisplay() {
+    const pinInput = document.getElementById('pinInput');
+    const unlockBtn = document.getElementById('unlockBtn');
+    const pinWarning = document.getElementById('pinWarning');
+    
+    if (!pinInput || !unlockBtn) return;
+    
+    const now = Date.now();
+    const isLockedOut = this.pinLockoutUntil > now;
+    
+    // Disable input and button during lockout
+    if (isLockedOut) {
+      pinInput.disabled = true;
+      unlockBtn.disabled = true;
+      const remainingTime = Math.ceil((this.pinLockoutUntil - now) / 1000);
+      pinInput.placeholder = `Wait ${remainingTime}s`;
+      unlockBtn.textContent = 'Unlock';
+    } else {
+      pinInput.disabled = false;
+      unlockBtn.disabled = false;
+      pinInput.placeholder = '••••••';
+      unlockBtn.textContent = 'Unlock';
+    }
+    
+    // Update warning message - only show after first lockout
+    if (pinWarning) {
+      if (isLockedOut) {
+        const remainingTime = Math.ceil((this.pinLockoutUntil - now) / 1000);
+        pinWarning.innerHTML = `<strong>Account locked!</strong> Too many failed attempts. Please wait ${remainingTime} seconds before trying again.`;
+        pinWarning.style.display = 'block';
+      } else {
+        pinWarning.style.display = 'none';
+      }
+    }
+  }
+
+  startPinDisplayUpdater() {
+    // Clear existing updater
+    if (this.pinDisplayUpdater) {
+      clearInterval(this.pinDisplayUpdater);
+    }
+    
+    // Update display every second when locked out
+    this.pinDisplayUpdater = setInterval(() => {
+      const now = Date.now();
+      const isLockedOut = this.pinLockoutUntil > now;
+      
+      if (isLockedOut) {
+        this.updatePinAttemptDisplay();
+      } else {
+        // No need to update if not locked out
+        clearInterval(this.pinDisplayUpdater);
+        this.pinDisplayUpdater = null;
+      }
+    }, 1000);
   }
 
   // Vault timeout functionality
