@@ -1,4 +1,4 @@
-# Bitcoin Mini Extension <span style="color: #f2a900;">₿</span>
+# Bitcoin Mini Extension ₿
 
 A simple, secure, and clean Bitcoin price tracker and address vault for your browser.
 
@@ -39,7 +39,7 @@ Also compatible with Edge, Brave, Opera, and other Chromium-based browsers via C
 
 ## Contributing
 
-Found a bug or have a feature idea? Please [open an issue](https://github.com/beasthouse/bitcoin-mini/issues) on GitHub!
+Found a bug or have a feature idea? Please [open an issue](https://github.com/vabraham/bitcoin-mini/issues/new) on GitHub!
 
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
