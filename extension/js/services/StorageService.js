@@ -18,13 +18,12 @@ export class StorageService {
     try {
       const result = await browser.storage.local.get([
         'watchlist',
-        'unit',
         'vaultTimeout',
         'currency'
       ]);
 
       this.watchlist = Array.isArray(result.watchlist) ? result.watchlist : [];
-      this.unit = result.unit || CONFIG.DEFAULTS.UNIT;
+      this.unit = CONFIG.DEFAULTS.UNIT; // Always default to BTC
       this.vaultTimeout = result.vaultTimeout || CONFIG.DEFAULTS.VAULT_TIMEOUT;
       this.currency = result.currency || CONFIG.DEFAULTS.CURRENCY;
 
@@ -49,7 +48,6 @@ export class StorageService {
     try {
       await browser.storage.local.set({
         watchlist: this.watchlist,
-        unit: this.unit,
         vaultTimeout: this.vaultTimeout,
         currency: this.currency
       });
@@ -177,13 +175,6 @@ export class StorageService {
   }
 
   // Currency and unit management
-  setUnit(unit) {
-    if (['BTC', 'SATS', 'USD'].includes(unit)) {
-      this.unit = unit;
-      return true;
-    }
-    return false;
-  }
 
   getUnit() {
     return this.unit;
@@ -246,9 +237,6 @@ export class StorageService {
 
       // Import settings if available
       if (importData.settings) {
-        if (importData.settings.unit) {
-          this.setUnit(importData.settings.unit);
-        }
         if (importData.settings.currency) {
           this.setCurrency(importData.settings.currency);
         }

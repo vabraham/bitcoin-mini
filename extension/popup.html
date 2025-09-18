@@ -209,9 +209,47 @@
         <h3>Settings</h3>
         
         <div class="settings-section">
+          <h4>Vault Timeout</h4>
+          <p>Automatically lock the vault after a period of inactivity.</p>
+
+          <div class="dropdown-container">
+            <select id="vaultTimeoutSelect" class="modern-dropdown">
+              <option value="never">Never (manual lock only)</option>
+              <option value="extension_open">On Extension Open</option>
+              <option value="browser_restart">On Browser Restart</option>
+              <option value="system_lock">On System Lock</option>
+              <option value="1">1 minute</option>
+              <option value="5">5 minutes</option>
+              <option value="15">15 minutes</option>
+              <option value="30">30 minutes</option>
+              <option value="60">1 hour</option>
+            </select>
+            <div class="dropdown-arrow">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6,9 12,15 18,9"></polyline>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h4>PIN Management</h4>
+          <p>Change your vault PIN for enhanced security.</p>
+
+          <button id="changePinBtn" class="settings-action-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <circle cx="12" cy="16" r="1"></circle>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            Change PIN
+          </button>
+        </div>
+
+        <div class="settings-section">
           <h4>Currency</h4>
           <p>Select your preferred currency for price display and calculations.</p>
-          
+
           <div class="dropdown-container">
             <select id="currencySelect" class="modern-dropdown">
               <option value="usd">🇺🇸 USD - US Dollar</option>
@@ -289,44 +327,6 @@
               </svg>
             </div>
           </div>
-        </div>
-        
-        <div class="settings-section">
-          <h4>Vault Timeout</h4>
-          <p>Automatically lock the vault after a period of inactivity.</p>
-          
-          <div class="dropdown-container">
-            <select id="vaultTimeoutSelect" class="modern-dropdown">
-              <option value="never">Never (manual lock only)</option>
-              <option value="extension_open">On Extension Open</option>
-              <option value="browser_restart">On Browser Restart</option>
-              <option value="system_lock">On System Lock</option>
-              <option value="1">1 minute</option>
-              <option value="5">5 minutes</option>
-              <option value="15">15 minutes</option>
-              <option value="30">30 minutes</option>
-              <option value="60">1 hour</option>
-            </select>
-            <div class="dropdown-arrow">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="6,9 12,15 18,9"></polyline>
-              </svg>
-            </div>
-          </div>
-        </div>
-        
-        <div class="settings-section">
-          <h4>PIN Management</h4>
-          <p>Change your vault PIN for enhanced security.</p>
-          
-          <button id="changePinBtn" class="settings-action-btn">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-              <circle cx="12" cy="16" r="1"></circle>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-            </svg>
-            Change PIN
-          </button>
         </div>
         
         <div class="modal-buttons">

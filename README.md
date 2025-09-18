@@ -1,4 +1,4 @@
-# Bitcoin Mini Extension ₿
+# Bitcoin Mini Extension <span style="color: #f2a900;">₿</span>
 
 A simple, secure, and clean Bitcoin price tracker and address vault for your browser.
 
@@ -35,7 +35,7 @@ Also compatible with Edge, Brave, Opera, and other Chromium-based browsers via C
 2. **Add Addresses**: Click "Add Address" to store Bitcoin addresses
 3. **Secure Vault**: Set up a PIN to protect your addresses
 4. **Track Fees**: Monitor network fees from multiple sources
-5. **Change Settings**: Click the settings icon to customize vault timeout
+5. **Change Settings**: Click the settings icon to customize vault timeout, currency display, pin modification, etc.
 
 ## Contributing
 
@@ -87,4 +87,4 @@ MIT License - see [LICENSE](LICENSE) file for details
 
 ---
 
-*Built with ❤️ for the Bitcoin community*
+*Built for the Bitcoin community*

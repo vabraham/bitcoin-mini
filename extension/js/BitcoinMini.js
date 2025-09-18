@@ -61,12 +61,14 @@ export class BitcoinMini {
         if (this.storageService.isDataLoaded) {
           this.uiManager.renderWatchlist();
           this.uiManager.updateCurrencyToggle();
+          // Unit always defaults to BTC, no need to update toggle buttons
         } else {
           console.error('CRITICAL: Trying to render UI but storage data not loaded!');
           // Try to reload data and then render
           this.storageService.loadData().then(() => {
             this.uiManager.renderWatchlist();
             this.uiManager.updateCurrencyToggle();
+            // Unit always defaults to BTC, no need to update toggle buttons
           });
         }
       }, 100); // Small delay to ensure everything is ready
@@ -204,13 +206,13 @@ export class BitcoinMini {
       return;
     }
 
-    // Unit toggle buttons
+    // Unit toggle buttons - temporary session-only changes
     else if (target.id === 'toggleBtcBtn') {
-      this.setUnit('BTC');
+      this.setSessionUnit('BTC');
     } else if (target.id === 'toggleSatsBtn') {
-      this.setUnit('SATS');
+      this.setSessionUnit('SATS');
     } else if (target.id === 'toggleCurrencyBtn') {
-      this.setUnit('USD');
+      this.setSessionUnit('USD');
     }
 
     // Address management
@@ -729,18 +731,12 @@ export class BitcoinMini {
     this.uiManager.updateCurrencyToggle();
   }
 
-  // Unit management
-  async setUnit(newUnit) {
-    this.storageService.setUnit(newUnit);
+  // Unit management - session only, no persistence
+  setSessionUnit(newUnit) {
+    // Update unit in memory only (no saving to storage)
+    this.storageService.unit = newUnit;
 
-    try {
-      await this.storageService.saveData();
-      console.log('Unit setting saved successfully:', newUnit);
-    } catch (error) {
-      console.error('Failed to save unit setting:', error);
-      // Don't show error to user for unit changes, just log it
-    }
-
+    // Update UI immediately
     this.uiManager.renderWatchlist();
     this.uiManager.updateToggleButtons();
     this.uiManager.updateCurrencyToggle();
