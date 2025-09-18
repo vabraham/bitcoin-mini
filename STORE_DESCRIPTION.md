@@ -34,7 +34,7 @@ Finally, a Bitcoin extension that respects your privacy and keeps things simple.
 - Anyone tired of bloated, tracking-heavy crypto extensions
 - Users who value simplicity and security
 
-### 🛡️ **What We DON'T Do**
+### 🛡️ **What It DOESN'T Do**
 - ❌ No user accounts or sign-ups
 - ❌ No data collection or analytics
 - ❌ No ads or affiliate links
@@ -51,6 +51,6 @@ Finally, a Bitcoin extension that respects your privacy and keeps things simple.
 
 ---
 
-**Developer Note**: Bitcoin Mini was created by Bitcoin enthusiasts who believe privacy and simplicity shouldn't be compromised. The extension is completely open source and welcomes community contributions.
+**Developer Note**: Privacy and simplicity shouldn't be compromised, the extension is completely open source and welcomes community contributions.
 
 **Support**: Found a bug or have a feature request? Visit our GitHub repository for support and contribute to making Bitcoin Mini even better.

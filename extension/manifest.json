@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "description": "Simple Bitcoin price, fees, and address tracking with secure vault functionality",
   "author": "Bitcoin Mini Team",
-  "homepage_url": "https://github.com/bitcoin-mini/extension",
+  "homepage_url": "https://github.com/beasthouse/bitcoin-mini",
   
   "permissions": ["storage"],
   

@@ -30,7 +30,6 @@ export class BitcoinMini {
 
   async init() {
     if (this.isInitializing || this.isInitialized) {
-      console.log('Already initializing or initialized, skipping...');
       return;
     }
 
@@ -422,7 +421,6 @@ export class BitcoinMini {
       return;
     }
 
-    console.log('Added address to watchlist:', addressValidation.address);
 
     // Render immediately to show the address
     this.uiManager.renderWatchlist();
@@ -447,7 +445,6 @@ export class BitcoinMini {
         quantum_risk: quantumResult.overall_risk
       });
 
-      console.log(`Updated ${addressValidation.address}: balance=${summary.balance_btc}, risk=${quantumResult.overall_risk}`);
 
       this.uiManager.renderWatchlist();
       this.notificationManager.showAddressAdded(addressValidation.address);
@@ -472,7 +469,6 @@ export class BitcoinMini {
     this.uiManager.clearAddressInputs();
     try {
       await this.storageService.saveData();
-      console.log('Address data saved successfully');
     } catch (error) {
       console.error('Failed to save address data:', error);
       this.notificationManager.showError('Failed to save address');

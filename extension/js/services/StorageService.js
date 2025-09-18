@@ -52,12 +52,6 @@ export class StorageService {
         currency: this.currency
       });
 
-      console.log('Saved data:', {
-        watchlistLength: this.watchlist.length,
-        unit: this.unit,
-        currency: this.currency,
-        vaultTimeout: this.vaultTimeout
-      });
 
       return true;
     } catch (error) {
@@ -106,7 +100,6 @@ export class StorageService {
 
       await browser.storage.local.set(updateData);
 
-      console.log('Saved settings:', updateData);
       return true;
     } catch (error) {
       console.error('Error saving settings:', error);
@@ -129,14 +122,12 @@ export class StorageService {
     };
 
     this.watchlist.push(newItem);
-    console.log('Added address to watchlist:', address);
     return newItem;
   }
 
   removeAddress(index) {
     if (index >= 0 && index < this.watchlist.length) {
       const removed = this.watchlist.splice(index, 1)[0];
-      console.log('Removed address from watchlist:', removed.address);
       return removed;
     }
     return null;
@@ -146,7 +137,6 @@ export class StorageService {
     const item = this.watchlist.find(item => item.address === address);
     if (item) {
       Object.assign(item, updates);
-      console.log('Updated address in watchlist:', address, updates);
       return item;
     }
     return null;
