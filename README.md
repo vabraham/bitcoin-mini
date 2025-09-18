@@ -43,16 +43,6 @@ Found a bug or have a feature idea? Please [open an issue](https://github.com/va
 
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
-## Support Development
-
-If you find this extension useful, consider supporting development:
-
-**Lightning Address**: `greenpenguin6@primal.net`
-
-![Lightning QR](lightning-qr.png)
-
-Every satoshi helps keep this project maintained and improved! ⚡
-
 ## Privacy
 
 - No data is sent to external servers except for price and fee data
@@ -66,6 +56,16 @@ Every satoshi helps keep this project maintained and improved! ⚡
 - Firefox 109+
 - Edge 88+
 - Other Chromium-based browsers
+
+## Support Development
+
+If you find this extension useful, consider supporting development:
+
+**Lightning Address**: 
+
+![Lightning QR](lightning-qr.png) `greenpenguin6@primal.net`
+
+Every satoshi helps keep this project maintained and improved! ⚡
 
 ## Development
 
