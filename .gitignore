@@ -72,3 +72,6 @@ logs/
 
 # Claude Code
 .claude/
+
+# Chrome Web Store assets
+store_images/
