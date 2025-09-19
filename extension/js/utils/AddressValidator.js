@@ -211,25 +211,26 @@ export class AddressValidator {
 
     try {
       let decoded = [];
-      let multi = 1;
-      let s = str;
 
-      while (s.length > 0) {
-        const byte = alphabet.indexOf(s[s.length - 1]);
-        if (byte < 0) throw new Error('Invalid character');
+      for (let i = 0; i < str.length; i++) {
+        const char = str[i];
+        const charIndex = alphabet.indexOf(char);
+        if (charIndex < 0) throw new Error('Invalid character');
 
-        for (let i = 0; i < decoded.length; i++) {
-          decoded[i] += byte * multi;
-          byte = Math.floor(decoded[i] / 256);
-          decoded[i] %= 256;
+        let carry = charIndex;
+        for (let j = 0; j < decoded.length; j++) {
+          carry += decoded[j] * base;
+          decoded[j] = carry % 256;
+          carry = Math.floor(carry / 256);
         }
-        if (byte > 0) decoded.push(byte);
 
-        multi *= base;
-        s = s.slice(0, -1);
+        while (carry > 0) {
+          decoded.push(carry % 256);
+          carry = Math.floor(carry / 256);
+        }
       }
 
-      // Add leading zeros
+      // Add leading zeros for each '1' at the beginning
       for (let i = 0; i < str.length && str[i] === '1'; i++) {
         decoded.push(0);
       }
