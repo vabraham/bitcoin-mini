@@ -53,4 +53,4 @@ Finally, a Bitcoin extension that respects your privacy and keeps things simple.
 
 **Developer Note**: Privacy and simplicity shouldn't be compromised, the extension is completely open source and welcomes community contributions.
 
-**Support**: Found a bug or have a feature request? Visit our GitHub repository for support and contribute to making Bitcoin Mini even better.
+**Support**: Found a bug or have a feature request? Visit the [GitHub repository](https://github.com/vabraham/bitcoin-mini) for support and contribute to making Bitcoin Mini even better.

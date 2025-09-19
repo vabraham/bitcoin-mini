@@ -5,7 +5,7 @@
 ## Overview
 Bitcoin Mini is committed to protecting your privacy. This extension stores all your data locally on your device and does not collect, store, or transmit any personal information to external servers.
 
-## Information We Collect
+## Information Collected
 Bitcoin Mini does NOT collect any personal information. The extension only accesses:
 
 ### Local Storage
@@ -37,7 +37,7 @@ These requests contain only public Bitcoin addresses and no personal identifying
 - Data persists until you uninstall the extension or clear browser data
 
 ## Data Sharing
-Bitcoin Mini does NOT share any data with third parties. We do not:
+Bitcoin Mini does NOT share any data with third parties. The extension does not:
 - Sell or rent any information
 - Share data with advertisers
 - Use analytics services
@@ -64,7 +64,7 @@ The extension connects to these public APIs:
 These services have their own privacy policies. Bitcoin Mini does not control these services.
 
 ## Changes to Privacy Policy
-We may update this privacy policy occasionally. Changes will be posted in the extension's GitHub repository and updated in the Chrome Web Store listing.
+This privacy policy may be updated occasionally. Changes will be posted in the extension's GitHub repository and updated in the Chrome Web Store listing.
 
 ## Contact
 For privacy questions or concerns:
