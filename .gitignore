@@ -69,3 +69,6 @@ logs/
 
 # Release packages
 *.zip
+
+# Claude Code
+.claude/
