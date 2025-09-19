@@ -5,9 +5,7 @@ Simple, secure Bitcoin price tracker and address vault. PIN-protected, privacy-f
 
 ## Detailed Description
 
-**Bitcoin Mini - The Clean, Secure Bitcoin Tracker You've Been Looking For**
-
-Finally, a Bitcoin extension that respects your privacy and keeps things simple. No accounts, no tracking, no complicated setup.
+**Bitcoin Mini - A Bitcoin extension built for people who value their privacy and clean software. No accounts, no tracking, no complicated setup.**
 
 ### 🔒 **Privacy & Security First**
 - **PIN Protection**: Secure your Bitcoin addresses with a 4-6 digit PIN
