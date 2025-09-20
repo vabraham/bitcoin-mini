@@ -395,7 +395,7 @@ export class BitcoinMini {
     const { address, label } = inputs;
 
     // Validate address
-    const addressValidation = AddressValidator.validateAddressForWatchlist(
+    const addressValidation = await AddressValidator.validateAddressForWatchlist(
       address,
       this.storageService.getWatchlist()
     );

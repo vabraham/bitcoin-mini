@@ -1,7 +1,7 @@
 import { CONFIG } from '../config.js';
 
 export class AddressValidator {
-  static validate(address) {
+  static async validate(address) {
     if (!address || typeof address !== 'string') {
       return {
         isValid: false,
@@ -40,7 +40,7 @@ export class AddressValidator {
     }
 
     // Perform comprehensive Bitcoin address validation
-    const validationResult = this.validateBitcoinAddress(addr);
+    const validationResult = await this.validateBitcoinAddress(addr);
     if (!validationResult.isValid) {
       return validationResult;
     }
@@ -52,7 +52,7 @@ export class AddressValidator {
     };
   }
 
-  static validateBitcoinAddress(address) {
+  static async validateBitcoinAddress(address) {
     // Basic character set validation
     if (!CONFIG.REGEX.ADDRESS_CHARS.test(address)) {
       return {
@@ -66,10 +66,10 @@ export class AddressValidator {
     if (address.startsWith('bc1') || address.startsWith('tb1')) {
       return this.validateBech32Address(address);
     } else if (address.startsWith('1') || address.startsWith('3')) {
-      return this.validateBase58Address(address);
+      return await this.validateBase58Address(address);
     } else if (address.startsWith('2') || address.startsWith('m') || address.startsWith('n')) {
       // Testnet addresses
-      return this.validateBase58Address(address);
+      return await this.validateBase58Address(address);
     } else {
       return {
         isValid: false,
@@ -167,7 +167,7 @@ export class AddressValidator {
     }
   }
 
-  static validateBase58Address(address) {
+  static async validateBase58Address(address) {
     // Base58 validation for legacy addresses (1..., 3..., 2..., m..., n...)
 
     // Check length constraints
@@ -204,7 +204,7 @@ export class AddressValidator {
       const payload = decoded.slice(0, 21);
       const checksum = decoded.slice(21);
 
-      return this.verifyBase58Checksum(payload, checksum);
+      return await this.verifyBase58Checksum(payload, checksum);
     } catch (error) {
       return {
         isValid: false,
@@ -491,9 +491,9 @@ export class AddressValidator {
     };
   }
 
-  static validateAddressForWatchlist(address, existingWatchlist = []) {
+  static async validateAddressForWatchlist(address, existingWatchlist = []) {
     // First validate the address format
-    const addressValidation = this.validate(address);
+    const addressValidation = await this.validate(address);
     if (!addressValidation.isValid) {
       return addressValidation;
     }
