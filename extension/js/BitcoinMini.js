@@ -38,9 +38,10 @@ export class BitcoinMini {
       // Load data and initialize services with proper error handling
       const loadResult = await this.storageService.loadData();
 
+      // Initialize auth service with loaded settings
       await this.authService.init();
 
-      // Handle "On Extension Open" timeout BEFORE setting UI state
+      // Handle "On Extension Open" timeout AFTER settings are loaded
       await this.authService.handleExtensionOpenTimeout();
 
       // Set initial address section state based on lock status
@@ -352,14 +353,23 @@ export class BitcoinMini {
   // API methods
   async refreshPriceIfNeeded(force = false) {
     try {
-      this.uiManager.displayPriceLoading();
+      // Show cached data immediately if available
+      const cachedData = this.apiService.getCachedData();
+      if (cachedData.price && !force) {
+        this.uiManager.displayPriceData(cachedData.price);
+        this.uiManager.currentBtcPrice = cachedData.price.currentPrice || 0;
+        this.uiManager.renderWatchlist(); // Update USD values with cached price
+      } else {
+        this.uiManager.displayPriceLoading();
+      }
+
       const currency = this.storageService.getCurrency();
       const priceData = await this.apiService.refreshPriceIfNeeded(currency, force);
 
       if (priceData) {
         this.uiManager.displayPriceData(priceData);
         this.uiManager.currentBtcPrice = priceData.currentPrice || 0;
-        this.uiManager.renderWatchlist(); // Update USD values
+        this.uiManager.renderWatchlist(); // Update USD values with fresh data
       }
     } catch (error) {
       console.error('Price refresh error:', error);
@@ -369,6 +379,12 @@ export class BitcoinMini {
 
   async refreshFeesIfNeeded(force = false) {
     try {
+      // Show cached fees immediately if available
+      const cachedData = this.apiService.getCachedData();
+      if (cachedData.fees && !force) {
+        this.uiManager.displayFeesData(cachedData.fees);
+      }
+
       const feesData = await this.apiService.refreshFeesIfNeeded(force);
       if (feesData) {
         this.uiManager.displayFeesData(feesData);

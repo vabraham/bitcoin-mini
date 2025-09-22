@@ -37,11 +37,10 @@ export class AuthService {
     await browser.storage.local.set({
       pin: hashedPin,
       isSetup: true,
-      isLocked: false,
-      vaultTimeout: 'extension_open' // Set secure default for new users
+      isLocked: false
     });
 
-    this.vaultTimeout = 'extension_open';
+    // Don't override the user's vault timeout setting
     return true;
   }
 
@@ -271,13 +270,16 @@ export class AuthService {
   }
 
   async handleExtensionOpenTimeout() {
+    // Only lock if timeout is specifically set to 'extension_open'
     if (this.vaultTimeout === 'extension_open') {
       const authData = await browser.storage.local.get(['isLocked', 'pin']);
       if (!authData.isLocked && authData.pin) {
         await browser.storage.local.set({ isLocked: true });
+        console.log('Vault auto-locked due to extension_open timeout setting');
         return true;
       }
     }
+    console.log(`Vault timeout is '${this.vaultTimeout}' - no auto-lock needed`);
     return false;
   }
 
