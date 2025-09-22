@@ -138,13 +138,21 @@
       <div id="riskTooltip" class="tooltip">
         <h4>Address Risk Analysis</h4>
         <ul>
-          <li><strong>🟢 Low:</strong> No quantum-vulnerable UTXOs found</li>
-          <li><strong>🟡 Elevated:</strong> Address has been reused (spent outputs)</li>
-          <li><strong>🔴 High:</strong> Contains P2PK or Taproot UTXOs vulnerable to quantum attacks</li>
-          <li><strong>❌ Error:</strong> Unable to analyze (API error)</li>
-          <li><strong>❓ Unknown:</strong> No UTXOs found or special case (can try refreshing)</li>
+          <li><strong>🟢 Low:</strong> No quantum vulnerabilities - continue with best practices</li>
+          <li><strong>🟡 Elevated:</strong> Address reused - consider moving funds to fresh address</li>
+          <li><strong>🔴 High:</strong> Quantum-vulnerable UTXOs found - <strong>move funds immediately</strong></li>
+          <li><strong>❌ Error:</strong> Analysis failed - try refreshing</li>
+          <li><strong>❓ Unknown:</strong> No data available - refresh or wait for first transaction</li>
         </ul>
-        <p><em>Analysis checks up to 5 most recent UTXOs for quantum vulnerability patterns.</em></p>
+        <div style="margin-top: 12px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 4px;">
+          <strong>📖 Need help securing your Bitcoin?</strong><br>
+          <a href="https://github.com/vabraham/bitcoin-mini/blob/main/docs/quantum-risk-guide.md"
+             target="_blank"
+             style="color: #4a90e2; text-decoration: none;">
+            View our complete security guide →
+          </a>
+        </div>
+        <p style="margin-top: 8px;"><em>Analysis checks up to 5 most recent UTXOs for quantum vulnerability patterns.</em></p>
       </div>
     </div>
     </div> <!-- End main content -->
