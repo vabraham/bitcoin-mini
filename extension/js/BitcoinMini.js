@@ -477,6 +477,15 @@ export class BitcoinMini {
       return;
     }
 
+    // Save immediately after adding to ensure persistence
+    try {
+      await this.storageService.saveData();
+      console.log('✅ Address added and saved to storage immediately');
+    } catch (error) {
+      console.error('❌ Failed to save address immediately:', error);
+      this.notificationManager.showError('Failed to save address');
+      return;
+    }
 
     // Render immediately to show the address
     this.uiManager.renderWatchlist();
@@ -530,13 +539,15 @@ export class BitcoinMini {
       this.uiManager.renderWatchlist();
     }
 
-    // Clear inputs and save data immediately to prevent loss
+    // Clear inputs and save updated balance data
     this.uiManager.clearAddressInputs();
     try {
       await this.storageService.saveData();
+      console.log('✅ Address balance data saved successfully');
     } catch (error) {
-      console.error('Failed to save address data:', error);
-      this.notificationManager.showError('Failed to save address');
+      console.error('❌ Failed to save address balance data:', error);
+      // Don't show error to user - address is already saved, just balance data failed
+      console.warn('Address is safely saved, only balance data save failed');
     }
   }
 
