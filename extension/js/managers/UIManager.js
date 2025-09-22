@@ -242,9 +242,33 @@ export class UIManager {
   formatAmountWithStatus(btc, apiStatus, apiError) {
     const formattedAmount = this.formatAmount(btc);
 
-    // If there's an API error, show error indicator with tooltip
+    // Enhanced error display with specific error types
     if (apiStatus === 'error') {
-      return `<span title="${apiError || 'API error occurred'}" style="color: #dc2626;">❌ ${formattedAmount}</span>`;
+      let errorIcon = '❌';
+      let errorColor = '#dc2626';
+      let tooltip = apiError || 'API error occurred';
+
+      // Customize display based on error type
+      if (apiError && apiError.includes('rate limit')) {
+        errorIcon = '🚫';
+        tooltip = 'Rate limited - try refreshing later';
+      } else if (apiError && apiError.includes('timeout')) {
+        errorIcon = '⏱️';
+        tooltip = 'Request timeout - API too slow';
+      } else if (apiError && apiError.includes('network')) {
+        errorIcon = '🌐';
+        tooltip = 'Network error - check connection';
+      } else if (apiError && apiError.includes('unavailable')) {
+        errorIcon = '🔧';
+        tooltip = 'Blockchain APIs temporarily unavailable';
+      }
+
+      return `<span title="${tooltip}" style="color: ${errorColor};">${errorIcon} ${formattedAmount}</span>`;
+    }
+
+    // Show cached data indicator
+    if (apiStatus === 'success' && btc > 0) {
+      return `<span title="Balance loaded successfully">${formattedAmount}</span>`;
     }
 
     // If balance is 0 and no explicit success status, indicate it might be unused

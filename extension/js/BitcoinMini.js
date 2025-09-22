@@ -53,6 +53,9 @@ export class BitcoinMini {
       // Update PIN attempt display and start updater if needed
       this.updatePinAttemptDisplay();
 
+      // Load cached balance data for immediate display
+      await this.loadCachedBalances();
+
       // Conservative data refresh logic
       await this.intelligentDataRefresh();
 
@@ -136,6 +139,43 @@ export class BitcoinMini {
       this.uiManager.showAddressSection();
     } else {
       this.uiManager.showAddressSection();
+    }
+  }
+
+  // Load cached balance data for immediate display
+  async loadCachedBalances() {
+    try {
+      console.log('⚡ [BALANCE CACHE] Loading cached balances for immediate display...');
+
+      const watchlist = this.storageService.getWatchlist();
+      let updatedAny = false;
+
+      for (const item of watchlist) {
+        if (!item.address) continue;
+
+        // Try to get cached balance
+        const cachedBalance = this.apiService.getCachedBalance(item.address);
+
+        if (cachedBalance && cachedBalance.balance_btc !== item.balance_btc) {
+          console.log(`⚡ [BALANCE CACHE] Updating ${item.address} with cached balance: ${cachedBalance.balance_btc} BTC`);
+
+          this.storageService.updateAddress(item.address, {
+            balance_btc: cachedBalance.balance_btc,
+            api_status: cachedBalance.api_status,
+            data_source: cachedBalance.data_source + '_cached'
+          });
+          updatedAny = true;
+        }
+      }
+
+      if (updatedAny) {
+        console.log('⚡ [BALANCE CACHE] Updated watchlist with cached balances');
+      } else {
+        console.log('⚡ [BALANCE CACHE] No cached balances available or all up to date');
+      }
+
+    } catch (error) {
+      console.error('❌ [BALANCE CACHE] Error loading cached balances:', error);
     }
   }
 
@@ -504,7 +544,7 @@ export class BitcoinMini {
     setTimeout(async () => {
       try {
         const [summary, quantumResult] = await Promise.all([
-          this.apiService.fetchAddressSummary(address),
+          this.apiService.fetchAddressSummary(address, true), // force=true for background retry
           this.apiService.checkQuantumExposure(address)
         ]);
 
@@ -551,7 +591,7 @@ export class BitcoinMini {
   }
 
   async refreshAddressData(address) {
-    console.log('Manually refreshing data for address:', address);
+    console.log('🔄 [REFRESH] Manually refreshing data for address:', address);
 
     // Set to checking state
     this.storageService.updateAddress(address, { quantum_risk: 'checking...' });
@@ -559,7 +599,7 @@ export class BitcoinMini {
 
     try {
       const [summary, quantumResult] = await Promise.all([
-        this.apiService.fetchAddressSummary(address),
+        this.apiService.fetchAddressSummary(address, true), // force=true for manual refresh
         this.apiService.checkQuantumExposure(address)
       ]);
 
