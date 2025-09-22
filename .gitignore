@@ -75,3 +75,6 @@ logs/
 
 # Chrome Web Store assets
 store_images/
+
+# Development debugging tools
+debug-storage.html
