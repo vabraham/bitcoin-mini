@@ -67,12 +67,21 @@ export class BitcoinMini {
           // Unit always defaults to BTC, no need to update toggle buttons
         } else {
           console.error('CRITICAL: Trying to render UI but storage data not loaded!');
-          // Try to reload data and then render
-          this.storageService.loadData().then(() => {
+          // Check if there's existing data before reloading
+          const existingWatchlist = this.storageService.getWatchlist();
+          if (existingWatchlist && existingWatchlist.length > 0) {
+            console.warn('⚠️ Found existing addresses despite data not loaded flag - rendering immediately');
             this.uiManager.renderWatchlist();
             this.uiManager.updateCurrencyToggle();
-            // Unit always defaults to BTC, no need to update toggle buttons
-          });
+          } else {
+            // Only reload if there's truly no data
+            console.log('📥 No existing data found, attempting to reload from storage');
+            this.storageService.loadData().then(() => {
+              this.uiManager.renderWatchlist();
+              this.uiManager.updateCurrencyToggle();
+              // Unit always defaults to BTC, no need to update toggle buttons
+            });
+          }
         }
       }, 100); // Small delay to ensure everything is ready
 

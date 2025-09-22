@@ -158,11 +158,17 @@ export class UIManager {
       return;
     }
 
-    // Safety check - don't render if storage isn't loaded
+    // Check if storage is loaded, but still try to render existing data
     if (!this.storageService.isDataLoaded) {
-      console.warn('renderWatchlist() called but storage data not loaded yet - skipping render');
-      tbody.innerHTML = '<tr><td colspan="5">Loading addresses...</td></tr>';
-      return;
+      console.warn('⚠️ [RENDER] Storage not marked as loaded, but attempting to render existing data...');
+      const existingWatchlist = this.storageService.getWatchlist();
+      if (!existingWatchlist || existingWatchlist.length === 0) {
+        console.warn('⚠️ [RENDER] No watchlist data available, showing loading message');
+        tbody.innerHTML = '<tr><td colspan="5">Loading addresses...</td></tr>';
+        return;
+      } else {
+        console.log(`⚡ [RENDER] Found ${existingWatchlist.length} addresses despite data not loaded flag - rendering anyway`);
+      }
     }
 
     tbody.innerHTML = '';
