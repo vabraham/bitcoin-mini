@@ -234,15 +234,27 @@ export class ApiService {
 
       console.log(`Balance for ${address}: ${balance} BTC`);
 
-      return { balance_btc: balance };
+      return {
+        balance_btc: balance,
+        api_status: 'success',
+        data_source: 'blockstream'
+      };
 
     } catch (error) {
       console.error('Error fetching balance for', address, ':', error);
-      return await this.fetchAddressSummaryFallback(address);
+
+      // Check if it's a 400 error (bad request) vs other errors
+      const is400Error = error.message && error.message.includes('400');
+
+      if (is400Error) {
+        console.warn('Address rejected by primary API, trying fallback...');
+      }
+
+      return await this.fetchAddressSummaryFallback(address, error);
     }
   }
 
-  async fetchAddressSummaryFallback(address) {
+  async fetchAddressSummaryFallback(address, primaryError = null) {
     try {
       console.log('Trying fallback API for address:', address);
 
@@ -251,7 +263,7 @@ export class ApiService {
 
       if (!data || !data.chain_stats) {
         console.warn('No valid data from fallback API for address:', address);
-        return { balance_btc: 0 };
+        return this.createErrorResponse(address, 'Both APIs returned no data - address may be unused or invalid', primaryError);
       }
 
       const chainStats = data.chain_stats || {};
@@ -262,12 +274,42 @@ export class ApiService {
 
       console.log(`Fallback balance for ${address}: ${balance} BTC`);
 
-      return { balance_btc: balance };
+      return {
+        balance_btc: balance,
+        api_status: 'success',
+        data_source: 'mempool_fallback'
+      };
 
-    } catch (error) {
-      console.error('Fallback API error for', address, ':', error);
-      return { balance_btc: 0 };
+    } catch (fallbackError) {
+      console.error('Fallback API error for', address, ':', fallbackError);
+      return this.createErrorResponse(address, 'Unable to fetch balance data', primaryError, fallbackError);
     }
+  }
+
+  createErrorResponse(address, userMessage, primaryError = null, fallbackError = null) {
+    // Determine the most likely cause based on error patterns
+    let errorType = 'api_error';
+    let detailedMessage = userMessage;
+
+    if (primaryError && fallbackError) {
+      const both400 = primaryError.message?.includes('400') && fallbackError.message?.includes('400');
+      if (both400) {
+        errorType = 'address_not_recognized';
+        detailedMessage = 'Address format not recognized by blockchain APIs - may be invalid or unused';
+      } else {
+        errorType = 'api_unavailable';
+        detailedMessage = 'Blockchain APIs temporarily unavailable - try again later';
+      }
+    }
+
+    return {
+      balance_btc: 0,
+      api_status: 'error',
+      error_type: errorType,
+      error_message: detailedMessage,
+      user_message: userMessage,
+      data_source: 'none'
+    };
   }
 
   async checkQuantumExposure(address) {

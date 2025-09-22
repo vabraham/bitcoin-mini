@@ -439,15 +439,24 @@ export class BitcoinMini {
         timeoutPromise
       ]);
 
-      // Update the item with fetched data
-      this.storageService.updateAddress(addressValidation.address, {
+      // Update the item with fetched data and API status
+      const updateData = {
         balance_btc: summary.balance_btc || 0,
         quantum_risk: quantumResult.overall_risk
-      });
+      };
 
+      // Add API error information if present
+      if (summary.api_status === 'error') {
+        updateData.api_error = summary.error_message;
+        updateData.api_status = 'error';
+        this.notificationManager.showToast(`Address added - ${summary.user_message}`);
+      } else {
+        updateData.api_status = 'success';
+        this.notificationManager.showAddressAdded(addressValidation.address);
+      }
 
+      this.storageService.updateAddress(addressValidation.address, updateData);
       this.uiManager.renderWatchlist();
-      this.notificationManager.showAddressAdded(addressValidation.address);
 
     } catch (error) {
       console.error('Address fetch error:', error);

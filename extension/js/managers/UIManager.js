@@ -177,7 +177,7 @@ export class UIManager {
       }
 
       const row = document.createElement('tr');
-      const balance = this.formatAmount(item.balance_btc);
+      const balance = this.formatAmountWithStatus(item.balance_btc, item.api_status, item.api_error);
       const risk = this.formatQuantumRisk(item.quantum_risk);
 
       row.innerHTML = `
@@ -237,6 +237,22 @@ export class UIManager {
       return symbol + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
     return (btc || 0).toFixed(8);
+  }
+
+  formatAmountWithStatus(btc, apiStatus, apiError) {
+    const formattedAmount = this.formatAmount(btc);
+
+    // If there's an API error, show error indicator with tooltip
+    if (apiStatus === 'error') {
+      return `<span title="${apiError || 'API error occurred'}" style="color: #dc2626;">❌ ${formattedAmount}</span>`;
+    }
+
+    // If balance is 0 and no explicit success status, indicate it might be unused
+    if ((btc === 0 || !btc) && apiStatus !== 'success') {
+      return `<span title="Address appears unused or balance unavailable" style="color: #6b7280;">${formattedAmount}</span>`;
+    }
+
+    return formattedAmount;
   }
 
   updateTotal() {
