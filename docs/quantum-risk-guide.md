@@ -103,7 +103,7 @@ Bitcoin Mini analyzes your addresses for quantum computing vulnerabilities. This
 
 **Hardware Wallets (Most Secure):**
 - Coldcard (Bitcoin-only)
-- Trezor Model Safe/T/One
+- Trezor Safe/Model T/Model One
 - Blockstream Jade/Jade Plus
 - Ledger Nano S/X
 
