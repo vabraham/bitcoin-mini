@@ -77,7 +77,7 @@ If you find this extension useful, consider supporting development:
 
 ![Lightning QR](lightning-qr.png) 
 
-Every satoshi helps keep this project maintained and improved! ⚡
+Every SAT helps keep this project maintained and improved! ⚡
 
 ## Development
 
