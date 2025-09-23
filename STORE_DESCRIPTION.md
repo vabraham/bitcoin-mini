@@ -29,7 +29,7 @@ Simple Bitcoin price, fees, and address tracking/risk analysis with secure vault
 ### 🎯 **Perfect For**
 - Bitcoin HODLers tracking multiple addresses
 - Privacy-conscious users who want local-only storage
-- Anyone tired of bloated, tracking-heavy crypto extensions
+- Anyone tired of bloated, tracking-heavy extensions
 - Users who value simplicity and security
 
 ### 🛡️ **What It DOESN'T Do**

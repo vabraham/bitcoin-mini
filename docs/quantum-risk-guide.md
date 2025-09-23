@@ -4,15 +4,15 @@ Bitcoin Mini analyzes your addresses for quantum computing vulnerabilities. This
 
 ## Risk Levels Explained
 
-### 🔴 **High Risk** - Immediate Action Required
+### 🔴 **High Risk** - Action Recommended
 **What it means:** Your address contains UTXOs (unspent outputs) that are vulnerable to quantum computer attacks.
 
 **Detected patterns:**
 - P2PK (Pay-to-Public-Key) outputs where the public key is exposed
 - Early Taproot implementations with potential vulnerabilities
 
-**Immediate actions:**
-1. **🚨 Move funds NOW** - Transfer all Bitcoin to a new, secure address
+**Recommended actions:**
+1. **Move funds soon** - Transfer all Bitcoin to a new, secure address
 2. **Use SegWit addresses** - Generate bc1q... addresses (P2WPKH/P2WSH)
 3. **Never reuse this address** - Retire it permanently
 4. **Check your wallet settings** - Ensure it generates modern address types
@@ -123,7 +123,7 @@ All recommended wallets support modern address types and good security practices
 
 ## Understanding Quantum Threats
 
-### Current Status (2024)
+### Current Status (2025)
 - **No immediate threat** - Current quantum computers cannot break Bitcoin cryptography
 - **Timeline uncertain** - Experts estimate 10-20+ years before quantum computers pose real risk
 - **Bitcoin is preparing** - Developers are researching quantum-resistant upgrades
@@ -144,7 +144,7 @@ All recommended wallets support modern address types and good security practices
 ## Frequently Asked Questions
 
 ### Q: Should I panic if I have "High Risk" addresses?
-**A:** No panic needed, but do take action. Current quantum computers cannot break Bitcoin. This analysis helps you prepare for future threats and improve security now.
+**A:** No panic needed, but do take action soon. Current quantum computers cannot break Bitcoin. This analysis helps you prepare for future threats and improve security now.
 
 ### Q: How often should I check my risk status?
 **A:** Check after any transaction involving the address. Bitcoin Mini automatically updates when you refresh address data.
