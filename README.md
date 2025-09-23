@@ -1,11 +1,11 @@
 # Bitcoin Mini Extension ₿
 
-A simple, secure, and clean Bitcoin price tracker and address vault for your browser.
+A simple, secure, private and open source Bitcoin price tracker and address vault for your browser.
 
 ## Installation
 
 ### Chrome Web Store
-*Coming soon* - Extension is currently under review by Chrome Web Store.
+[Install from Chrome Web Store](https://chromewebstore.google.com/detail/iffplmlgnkfhmonfnodgeajcgdlohode?utm_source=item-share-cb)
 
 ### Firefox Add-ons
 *Coming soon* - Extension will also be available for Firefox users.
@@ -15,8 +15,10 @@ Also compatible with Edge, Brave, Opera, and other Chromium-based browsers via C
 
 ## Features
 
+- **Open Source & Transparent**: Fully auditable code for complete transparency and security verification
 - **Real-time Bitcoin Price**: Live BTC price with USD, BTC, and SATS units
 - **Secure Address Vault**: Store and track Bitcoin addresses with optional PIN protection
+- **Quantum Risk Analysis**: Analyze addresses for quantum computing vulnerabilities and security recommendations
 - **Network Fee Tracking**: Monitor current network fees from multiple sources
 - **Cross-browser Support**: Works on Chrome, Firefox, and other Chromium-based browsers
 - **Privacy-focused**: All data stored locally, no external tracking (data will not sync between devices/browsers)
@@ -43,6 +45,16 @@ Also compatible with Edge, Brave, Opera, and other Chromium-based browsers via C
 - All addresses and PINs are stored locally in your browser
 - No tracking or analytics
 - Open source and auditable
+
+## Open Source
+
+Bitcoin Mini is completely open source and transparent:
+
+- **Full Code Transparency**: Every line of code is auditable on GitHub
+- **Community Contributions**: Bug reports, feature requests, and pull requests welcome
+- **No Hidden Functionality**: What you see is what you get - no tracking, no data collection
+- **Security Verification**: Independently verify all privacy and security claims
+- **MIT License**: Free to use, modify, and distribute
 
 ## Browser Compatibility
 

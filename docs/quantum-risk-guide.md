@@ -170,7 +170,7 @@ All recommended wallets support modern address types and good security practices
 ### This Extension
 Bitcoin Mini is designed to help you maintain good security practices. Keep the extension updated and check your addresses periodically.
 
-**Remember:** This analysis is based on current understanding of quantum computing threats. As the landscape evolves, so will our recommendations.
+**Remember:** This analysis is based on current understanding of quantum computing threats. As the landscape evolves, so will these recommendations.
 
 ---
 
