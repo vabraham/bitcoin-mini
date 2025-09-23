@@ -59,15 +59,6 @@ export class UIManager {
       changeEl.className = priceData.changeClass;
     }
 
-    // Apply cache status class to time element
-    const timeEl = this.safeGetElement('priceTime');
-    if (timeEl && priceData.timeClass) {
-      timeEl.className = `muted ${priceData.timeClass}`;
-    } else if (timeEl) {
-      timeEl.className = 'muted';
-    }
-  }
-
     // Store current BTC price for calculations
     if (priceData.currentPrice) {
       this.currentBtcPrice = priceData.currentPrice;
@@ -104,14 +95,6 @@ export class UIManager {
     this.safeUpdateElement('fee_hour', feesData.hourFee);
     this.safeUpdateElement('fee_econ', feesData.economyFee);
     this.safeUpdateElement('feeTime', feesData.time);
-
-    // Apply cache status class to time element
-    const timeEl = this.safeGetElement('feeTime');
-    if (timeEl && feesData.timeClass) {
-      timeEl.className = `muted ${feesData.timeClass}`;
-    } else if (timeEl) {
-      timeEl.className = 'muted';
-    }
 
     // Update fee categories
     this.updateFeeCategory('fee_fast', feesData.fastestFee);
