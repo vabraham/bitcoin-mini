@@ -158,11 +158,17 @@ export class UIManager {
       return;
     }
 
-    // Safety check - don't render if storage isn't loaded
+    // Check if storage is loaded, but still try to render existing data
     if (!this.storageService.isDataLoaded) {
-      console.warn('renderWatchlist() called but storage data not loaded yet - skipping render');
-      tbody.innerHTML = '<tr><td colspan="5">Loading addresses...</td></tr>';
-      return;
+      console.warn('⚠️ [RENDER] Storage not marked as loaded, but attempting to render existing data...');
+      const existingWatchlist = this.storageService.getWatchlist();
+      if (!existingWatchlist || existingWatchlist.length === 0) {
+        console.warn('⚠️ [RENDER] No watchlist data available, showing loading message');
+        tbody.innerHTML = '<tr><td colspan="5">Loading addresses...</td></tr>';
+        return;
+      } else {
+        console.log(`⚡ [RENDER] Found ${existingWatchlist.length} addresses despite data not loaded flag - rendering anyway`);
+      }
     }
 
     tbody.innerHTML = '';
@@ -177,7 +183,7 @@ export class UIManager {
       }
 
       const row = document.createElement('tr');
-      const balance = this.formatAmount(item.balance_btc);
+      const balance = this.formatAmountWithStatus(item.balance_btc, item.api_status, item.api_error);
       const risk = this.formatQuantumRisk(item.quantum_risk);
 
       row.innerHTML = `
@@ -237,6 +243,46 @@ export class UIManager {
       return symbol + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
     return (btc || 0).toFixed(8);
+  }
+
+  formatAmountWithStatus(btc, apiStatus, apiError) {
+    const formattedAmount = this.formatAmount(btc);
+
+    // Enhanced error display with specific error types
+    if (apiStatus === 'error') {
+      let errorIcon = '❌';
+      let errorColor = '#dc2626';
+      let tooltip = apiError || 'API error occurred';
+
+      // Customize display based on error type
+      if (apiError && apiError.includes('rate limit')) {
+        errorIcon = '🚫';
+        tooltip = 'Rate limited - try refreshing later';
+      } else if (apiError && apiError.includes('timeout')) {
+        errorIcon = '⏱️';
+        tooltip = 'Request timeout - API too slow';
+      } else if (apiError && apiError.includes('network')) {
+        errorIcon = '🌐';
+        tooltip = 'Network error - check connection';
+      } else if (apiError && apiError.includes('unavailable')) {
+        errorIcon = '🔧';
+        tooltip = 'Blockchain APIs temporarily unavailable';
+      }
+
+      return `<span title="${tooltip}" style="color: ${errorColor};">${errorIcon} ${formattedAmount}</span>`;
+    }
+
+    // Show cached data indicator
+    if (apiStatus === 'success' && btc > 0) {
+      return `<span title="Balance loaded successfully">${formattedAmount}</span>`;
+    }
+
+    // If balance is 0 and no explicit success status, indicate it might be unused
+    if ((btc === 0 || !btc) && apiStatus !== 'success') {
+      return `<span title="Address appears unused or balance unavailable" style="color: #6b7280;">${formattedAmount}</span>`;
+    }
+
+    return formattedAmount;
   }
 
   updateTotal() {

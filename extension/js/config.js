@@ -68,7 +68,7 @@ export const CONFIG = {
   DEFAULTS: {
     CURRENCY: 'usd',
     UNIT: 'BTC',
-    VAULT_TIMEOUT: 'never'
+    VAULT_TIMEOUT: 'extension_open' // More secure default - locks when extension closes
   },
 
   // Regular expressions

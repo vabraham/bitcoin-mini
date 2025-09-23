@@ -56,6 +56,23 @@ node test-runner.js
 - [ ] **Invalid Input**: Test edge cases (empty fields, special characters)
 - [ ] **Rate Limiting**: Verify API rate limit handling
 
+## Pre-Push Requirements
+
+**CRITICAL**: Before pushing ANY branch to remote, you MUST:
+
+1. **Run Tests**: Execute `node test-runner.js` and verify 100% pass rate
+2. **Verify No Regression**: Ensure all existing functionality still works
+3. **Check Git Status**: Commit all intended changes, no untracked critical files
+
+### Push Command Sequence
+```bash
+# 1. Run tests first
+node test-runner.js
+
+# 2. Only push if tests pass
+git push -u origin <branch-name>
+```
+
 ## Development Commands
 
 ### Testing

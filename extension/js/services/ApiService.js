@@ -6,6 +6,7 @@ export class ApiService {
     this.lastFeesUpdate = 0;
     this.priceCache = null;
     this.feesCache = null;
+    this.balanceCache = new Map(); // Cache for address balances
     this.isRateLimited = false;
     this.retryCount = 0;
   }
@@ -214,15 +215,53 @@ export class ApiService {
     }
   }
 
-  async fetchAddressSummary(address) {
+  // Check if we should use cached balance data
+  getCachedBalance(address) {
+    const cached = this.balanceCache.get(address);
+    if (!cached) return null;
+
+    const now = Date.now();
+    const isStale = (now - cached.timestamp) > CONFIG.CACHE_TIMEOUT;
+
+    if (isStale) {
+      console.log(`🕒 [BALANCE CACHE] Cache expired for ${address} (${now - cached.timestamp}ms old)`);
+      return null;
+    }
+
+    console.log(`⚡ [BALANCE CACHE] Using cached balance for ${address}: ${cached.data.balance_btc} BTC`);
+    return cached.data;
+  }
+
+  // Cache balance data
+  setCachedBalance(address, balanceData) {
+    this.balanceCache.set(address, {
+      timestamp: Date.now(),
+      data: balanceData
+    });
+    console.log(`💾 [BALANCE CACHE] Cached balance for ${address}: ${balanceData.balance_btc} BTC`);
+  }
+
+  async fetchAddressSummary(address, force = false) {
+    // Check cache first unless forced refresh
+    if (!force) {
+      const cachedBalance = this.getCachedBalance(address);
+      if (cachedBalance) {
+        return cachedBalance;
+      }
+    }
+
     try {
-      console.log('Fetching balance for address:', address);
+      console.log(`🔍 [BALANCE API] Fetching balance for address: ${address} (force: ${force})`);
+      console.log(`🔍 [BALANCE API] Using endpoint: ${CONFIG.ENDPOINTS.BLOCKSTREAM_ADDRESS}/${address}`);
 
       const response = await this.fetchWithRetry(`${CONFIG.ENDPOINTS.BLOCKSTREAM_ADDRESS}/${address}`);
+      console.log(`✅ [BALANCE API] Primary API response status: ${response.status}`);
+
       const data = await response.json();
+      console.log(`📊 [BALANCE API] Primary API data:`, data);
 
       if (!data) {
-        console.warn('No data returned for address:', address);
+        console.warn(`⚠️ [BALANCE API] No data returned for address: ${address}`);
         return await this.fetchAddressSummaryFallback(address);
       }
 
@@ -232,26 +271,50 @@ export class ApiService {
       const spent = (chainStats.spent_txo_sum || 0) + (mempoolStats.spent_txo_sum || 0);
       const balance = Math.max((funded - spent) / 1e8, 0);
 
-      console.log(`Balance for ${address}: ${balance} BTC`);
+      console.log(`💰 [BALANCE API] Calculated balance for ${address}: ${balance} BTC (funded: ${funded}, spent: ${spent})`);
 
-      return { balance_btc: balance };
+      const result = {
+        balance_btc: balance,
+        api_status: 'success',
+        data_source: 'blockstream'
+      };
+
+      // Cache the successful result
+      this.setCachedBalance(address, result);
+      return result;
 
     } catch (error) {
-      console.error('Error fetching balance for', address, ':', error);
-      return await this.fetchAddressSummaryFallback(address);
+      console.error(`❌ [BALANCE API] Primary API error for ${address}:`, error);
+      console.error(`❌ [BALANCE API] Error details - Status: ${error.message}, Type: ${error.name}`);
+
+      // Check if it's a 400 error (bad request) vs other errors
+      const is400Error = error.message && error.message.includes('400');
+      const is429Error = error.message && error.message.includes('429');
+
+      if (is429Error) {
+        console.warn(`🚫 [BALANCE API] Rate limited by primary API, trying fallback...`);
+      } else if (is400Error) {
+        console.warn(`⚠️ [BALANCE API] Address rejected by primary API, trying fallback...`);
+      }
+
+      return await this.fetchAddressSummaryFallback(address, error);
     }
   }
 
-  async fetchAddressSummaryFallback(address) {
+  async fetchAddressSummaryFallback(address, primaryError = null) {
     try {
-      console.log('Trying fallback API for address:', address);
+      console.log(`🔄 [BALANCE API] Trying fallback API for address: ${address}`);
+      console.log(`🔄 [BALANCE API] Using fallback endpoint: ${CONFIG.ENDPOINTS.MEMPOOL_ADDRESS}/${address}`);
 
       const response = await this.fetchWithRetry(`${CONFIG.ENDPOINTS.MEMPOOL_ADDRESS}/${address}`);
+      console.log(`✅ [BALANCE API] Fallback API response status: ${response.status}`);
+
       const data = await response.json();
+      console.log(`📊 [BALANCE API] Fallback API data:`, data);
 
       if (!data || !data.chain_stats) {
-        console.warn('No valid data from fallback API for address:', address);
-        return { balance_btc: 0 };
+        console.warn(`⚠️ [BALANCE API] No valid data from fallback API for address: ${address}`);
+        return this.createErrorResponse(address, 'Both APIs returned no data - address may be unused or invalid', primaryError);
       }
 
       const chainStats = data.chain_stats || {};
@@ -260,14 +323,55 @@ export class ApiService {
       const spent = (chainStats.spent_txo_sum || 0) + (mempoolStats.spent_txo_sum || 0);
       const balance = Math.max((funded - spent) / 1e8, 0);
 
-      console.log(`Fallback balance for ${address}: ${balance} BTC`);
+      console.log(`💰 [BALANCE API] Fallback calculated balance for ${address}: ${balance} BTC (funded: ${funded}, spent: ${spent})`);
 
-      return { balance_btc: balance };
+      const result = {
+        balance_btc: balance,
+        api_status: 'success',
+        data_source: 'mempool_fallback'
+      };
 
-    } catch (error) {
-      console.error('Fallback API error for', address, ':', error);
-      return { balance_btc: 0 };
+      // Cache the successful fallback result
+      this.setCachedBalance(address, result);
+      return result;
+
+    } catch (fallbackError) {
+      console.error(`❌ [BALANCE API] Fallback API error for ${address}:`, fallbackError);
+      console.error(`❌ [BALANCE API] Fallback error details - Status: ${fallbackError.message}, Type: ${fallbackError.name}`);
+
+      const is429Fallback = fallbackError.message && fallbackError.message.includes('429');
+      if (is429Fallback) {
+        console.error(`🚫 [BALANCE API] Both primary and fallback APIs are rate limited!`);
+      }
+
+      return this.createErrorResponse(address, 'Unable to fetch balance data', primaryError, fallbackError);
     }
+  }
+
+  createErrorResponse(address, userMessage, primaryError = null, fallbackError = null) {
+    // Determine the most likely cause based on error patterns
+    let errorType = 'api_error';
+    let detailedMessage = userMessage;
+
+    if (primaryError && fallbackError) {
+      const both400 = primaryError.message?.includes('400') && fallbackError.message?.includes('400');
+      if (both400) {
+        errorType = 'address_not_recognized';
+        detailedMessage = 'Address format not recognized by blockchain APIs - may be invalid or unused';
+      } else {
+        errorType = 'api_unavailable';
+        detailedMessage = 'Blockchain APIs temporarily unavailable - try again later';
+      }
+    }
+
+    return {
+      balance_btc: 0,
+      api_status: 'error',
+      error_type: errorType,
+      error_message: detailedMessage,
+      user_message: userMessage,
+      data_source: 'none'
+    };
   }
 
   async checkQuantumExposure(address) {
@@ -385,12 +489,14 @@ export class ApiService {
   getCachedData() {
     return {
       price: this.priceCache?.data || null,
-      fees: this.feesCache?.data || null
+      fees: this.feesCache?.data || null,
+      balances: this.balanceCache
     };
   }
 
   clearCache() {
     this.priceCache = null;
     this.feesCache = null;
+    this.balanceCache.clear();
   }
 }

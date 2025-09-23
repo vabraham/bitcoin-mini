@@ -38,9 +38,10 @@ export class BitcoinMini {
       // Load data and initialize services with proper error handling
       const loadResult = await this.storageService.loadData();
 
+      // Initialize auth service with loaded settings
       await this.authService.init();
 
-      // Handle "On Extension Open" timeout BEFORE setting UI state
+      // Handle "On Extension Open" timeout AFTER settings are loaded
       await this.authService.handleExtensionOpenTimeout();
 
       // Set initial address section state based on lock status
@@ -51,6 +52,9 @@ export class BitcoinMini {
 
       // Update PIN attempt display and start updater if needed
       this.updatePinAttemptDisplay();
+
+      // Load cached balance data for immediate display
+      await this.loadCachedBalances();
 
       // Conservative data refresh logic
       await this.intelligentDataRefresh();
@@ -63,12 +67,21 @@ export class BitcoinMini {
           // Unit always defaults to BTC, no need to update toggle buttons
         } else {
           console.error('CRITICAL: Trying to render UI but storage data not loaded!');
-          // Try to reload data and then render
-          this.storageService.loadData().then(() => {
+          // Check if there's existing data before reloading
+          const existingWatchlist = this.storageService.getWatchlist();
+          if (existingWatchlist && existingWatchlist.length > 0) {
+            console.warn('⚠️ Found existing addresses despite data not loaded flag - rendering immediately');
             this.uiManager.renderWatchlist();
             this.uiManager.updateCurrencyToggle();
-            // Unit always defaults to BTC, no need to update toggle buttons
-          });
+          } else {
+            // Only reload if there's truly no data
+            console.log('📥 No existing data found, attempting to reload from storage');
+            this.storageService.loadData().then(() => {
+              this.uiManager.renderWatchlist();
+              this.uiManager.updateCurrencyToggle();
+              // Unit always defaults to BTC, no need to update toggle buttons
+            });
+          }
         }
       }, 100); // Small delay to ensure everything is ready
 
@@ -135,6 +148,43 @@ export class BitcoinMini {
       this.uiManager.showAddressSection();
     } else {
       this.uiManager.showAddressSection();
+    }
+  }
+
+  // Load cached balance data for immediate display
+  async loadCachedBalances() {
+    try {
+      console.log('⚡ [BALANCE CACHE] Loading cached balances for immediate display...');
+
+      const watchlist = this.storageService.getWatchlist();
+      let updatedAny = false;
+
+      for (const item of watchlist) {
+        if (!item.address) continue;
+
+        // Try to get cached balance
+        const cachedBalance = this.apiService.getCachedBalance(item.address);
+
+        if (cachedBalance && cachedBalance.balance_btc !== item.balance_btc) {
+          console.log(`⚡ [BALANCE CACHE] Updating ${item.address} with cached balance: ${cachedBalance.balance_btc} BTC`);
+
+          this.storageService.updateAddress(item.address, {
+            balance_btc: cachedBalance.balance_btc,
+            api_status: cachedBalance.api_status,
+            data_source: cachedBalance.data_source + '_cached'
+          });
+          updatedAny = true;
+        }
+      }
+
+      if (updatedAny) {
+        console.log('⚡ [BALANCE CACHE] Updated watchlist with cached balances');
+      } else {
+        console.log('⚡ [BALANCE CACHE] No cached balances available or all up to date');
+      }
+
+    } catch (error) {
+      console.error('❌ [BALANCE CACHE] Error loading cached balances:', error);
     }
   }
 
@@ -352,23 +402,50 @@ export class BitcoinMini {
   // API methods
   async refreshPriceIfNeeded(force = false) {
     try {
-      this.uiManager.displayPriceLoading();
+      // Always show cached data immediately if available, regardless of force parameter
+      const cachedData = this.apiService.getCachedData();
+      if (cachedData.price) {
+        // Add simple cache indicator to existing price data
+        const priceDataWithIndicator = {
+          ...cachedData.price,
+          time: cachedData.price.time || 'Cached data'
+        };
+        this.uiManager.displayPriceData(priceDataWithIndicator);
+        this.uiManager.currentBtcPrice = cachedData.price.currentPrice || 0;
+        this.uiManager.renderWatchlist(); // Update USD values with cached price
+      } else {
+        // Only show loading if no cached data exists at all
+        this.uiManager.displayPriceLoading();
+      }
+
       const currency = this.storageService.getCurrency();
       const priceData = await this.apiService.refreshPriceIfNeeded(currency, force);
 
       if (priceData) {
         this.uiManager.displayPriceData(priceData);
         this.uiManager.currentBtcPrice = priceData.currentPrice || 0;
-        this.uiManager.renderWatchlist(); // Update USD values
+        this.uiManager.renderWatchlist(); // Update USD values with fresh data
+      } else if (this.apiService.isRateLimited && !cachedData.price) {
+        // Special case: rate limited with no cached data
+        this.uiManager.displayPriceError('Rate limited - try again later');
       }
     } catch (error) {
       console.error('Price refresh error:', error);
-      this.uiManager.displayPriceError(error);
+      // Only show error if we don't have cached data to fall back on
+      if (!cachedData.price) {
+        this.uiManager.displayPriceError(error);
+      }
     }
   }
 
   async refreshFeesIfNeeded(force = false) {
     try {
+      // Always show cached fees immediately if available, regardless of force parameter
+      const cachedData = this.apiService.getCachedData();
+      if (cachedData.fees) {
+        this.uiManager.displayFeesData(cachedData.fees);
+      }
+
       const feesData = await this.apiService.refreshFeesIfNeeded(force);
       if (feesData) {
         this.uiManager.displayFeesData(feesData);
@@ -421,6 +498,15 @@ export class BitcoinMini {
       return;
     }
 
+    // Save immediately after adding to ensure persistence
+    try {
+      await this.storageService.saveData();
+      console.log('✅ Address added and saved to storage immediately');
+    } catch (error) {
+      console.error('❌ Failed to save address immediately:', error);
+      this.notificationManager.showError('Failed to save address');
+      return;
+    }
 
     // Render immediately to show the address
     this.uiManager.renderWatchlist();
@@ -439,15 +525,24 @@ export class BitcoinMini {
         timeoutPromise
       ]);
 
-      // Update the item with fetched data
-      this.storageService.updateAddress(addressValidation.address, {
+      // Update the item with fetched data and API status
+      const updateData = {
         balance_btc: summary.balance_btc || 0,
         quantum_risk: quantumResult.overall_risk
-      });
+      };
 
+      // Add API error information if present
+      if (summary.api_status === 'error') {
+        updateData.api_error = summary.error_message;
+        updateData.api_status = 'error';
+        this.notificationManager.showToast(`Address added - ${summary.user_message}`);
+      } else {
+        updateData.api_status = 'success';
+        this.notificationManager.showAddressAdded(addressValidation.address);
+      }
 
+      this.storageService.updateAddress(addressValidation.address, updateData);
       this.uiManager.renderWatchlist();
-      this.notificationManager.showAddressAdded(addressValidation.address);
 
     } catch (error) {
       console.error('Address fetch error:', error);
@@ -465,13 +560,15 @@ export class BitcoinMini {
       this.uiManager.renderWatchlist();
     }
 
-    // Clear inputs and save data immediately to prevent loss
+    // Clear inputs and save updated balance data
     this.uiManager.clearAddressInputs();
     try {
       await this.storageService.saveData();
+      console.log('✅ Address balance data saved successfully');
     } catch (error) {
-      console.error('Failed to save address data:', error);
-      this.notificationManager.showError('Failed to save address');
+      console.error('❌ Failed to save address balance data:', error);
+      // Don't show error to user - address is already saved, just balance data failed
+      console.warn('Address is safely saved, only balance data save failed');
     }
   }
 
@@ -479,7 +576,7 @@ export class BitcoinMini {
     setTimeout(async () => {
       try {
         const [summary, quantumResult] = await Promise.all([
-          this.apiService.fetchAddressSummary(address),
+          this.apiService.fetchAddressSummary(address, true), // force=true for background retry
           this.apiService.checkQuantumExposure(address)
         ]);
 
@@ -526,7 +623,7 @@ export class BitcoinMini {
   }
 
   async refreshAddressData(address) {
-    console.log('Manually refreshing data for address:', address);
+    console.log('🔄 [REFRESH] Manually refreshing data for address:', address);
 
     // Set to checking state
     this.storageService.updateAddress(address, { quantum_risk: 'checking...' });
@@ -534,7 +631,7 @@ export class BitcoinMini {
 
     try {
       const [summary, quantumResult] = await Promise.all([
-        this.apiService.fetchAddressSummary(address),
+        this.apiService.fetchAddressSummary(address, true), // force=true for manual refresh
         this.apiService.checkQuantumExposure(address)
       ]);
 

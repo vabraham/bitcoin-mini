@@ -1,17 +1,17 @@
 # Chrome Web Store Description
 
 ## Short Description (132 chars max)
-Simple, secure Bitcoin price tracker and address vault. PIN-protected, privacy-focused, works offline. No accounts needed.
+Simple Bitcoin price, fees, and address tracking/risk analysis with secure vault functionality.
 
 ## Detailed Description
 
-**Bitcoin Mini - A Bitcoin extension built for people who value their privacy and clean software. No accounts, no tracking, no complicated setup.**
+**Bitcoin Mini - Open source Bitcoin extension built for people who value privacy and transparency. Fully auditable code on GitHub. No accounts, no tracking, no complicated setup.**
 
 ### 🔒 **Privacy & Security First**
+- **Open Source**: Fully auditable code for complete transparency - verify security yourself
 - **PIN Protection**: Secure your Bitcoin addresses with a 4-6 digit PIN
 - **Local Storage Only**: All data stays on your device, nothing sent to external servers
 - **No Tracking**: Zero analytics, cookies, or user behavior monitoring
-- **Open Source**: Fully auditable code for complete transparency
 
 ### ₿ **Core Features**
 - **Live Bitcoin Price**: Real-time BTC prices in 50+ currencies
@@ -51,4 +51,6 @@ Simple, secure Bitcoin price tracker and address vault. PIN-protected, privacy-f
 
 **Developer Note**: Privacy and simplicity shouldn't be compromised, the extension is completely open source and welcomes community contributions.
 
-**Support**: Found a bug or have a feature request? Visit the [GitHub repository](https://github.com/vabraham/bitcoin-mini) for support and contribute to making Bitcoin Mini even better.
+**GitHub Repository**: https://github.com/vabraham/bitcoin-mini
+
+**Support**: Found a bug or have a feature request? Visit the GitHub repo for support and to contribute to making Bitcoin Mini even better.
