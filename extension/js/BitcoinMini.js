@@ -402,13 +402,19 @@ export class BitcoinMini {
   // API methods
   async refreshPriceIfNeeded(force = false) {
     try {
-      // Show cached data immediately if available
+      // Always show cached data immediately if available, regardless of force parameter
       const cachedData = this.apiService.getCachedData();
-      if (cachedData.price && !force) {
-        this.uiManager.displayPriceData(cachedData.price);
+      if (cachedData.price) {
+        // Add simple cache indicator to existing price data
+        const priceDataWithIndicator = {
+          ...cachedData.price,
+          time: cachedData.price.time || 'Cached data'
+        };
+        this.uiManager.displayPriceData(priceDataWithIndicator);
         this.uiManager.currentBtcPrice = cachedData.price.currentPrice || 0;
         this.uiManager.renderWatchlist(); // Update USD values with cached price
       } else {
+        // Only show loading if no cached data exists at all
         this.uiManager.displayPriceLoading();
       }
 
@@ -419,18 +425,24 @@ export class BitcoinMini {
         this.uiManager.displayPriceData(priceData);
         this.uiManager.currentBtcPrice = priceData.currentPrice || 0;
         this.uiManager.renderWatchlist(); // Update USD values with fresh data
+      } else if (this.apiService.isRateLimited && !cachedData.price) {
+        // Special case: rate limited with no cached data
+        this.uiManager.displayPriceError('Rate limited - try again later');
       }
     } catch (error) {
       console.error('Price refresh error:', error);
-      this.uiManager.displayPriceError(error);
+      // Only show error if we don't have cached data to fall back on
+      if (!cachedData.price) {
+        this.uiManager.displayPriceError(error);
+      }
     }
   }
 
   async refreshFeesIfNeeded(force = false) {
     try {
-      // Show cached fees immediately if available
+      // Always show cached fees immediately if available, regardless of force parameter
       const cachedData = this.apiService.getCachedData();
-      if (cachedData.fees && !force) {
+      if (cachedData.fees) {
         this.uiManager.displayFeesData(cachedData.fees);
       }
 
