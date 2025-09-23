@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Bitcoin Mini",
   "version": "1.0.3",
-  "description": "Simple Bitcoin price, fees, and address tracking with secure vault functionality",
+  "description": "Simple Bitcoin price, fees, and address tracking/risk analysis with secure vault functionality.",
   "author": "vabraham",
   "homepage_url": "https://github.com/vabraham/bitcoin-mini",
   
