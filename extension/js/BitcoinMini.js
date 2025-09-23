@@ -18,7 +18,7 @@ export class BitcoinMini {
     this.notificationManager = new NotificationManager();
     this.storageService = new StorageService();
     this.uiManager = new UIManager(this.storageService, this.notificationManager);
-    this.apiService = new ApiService();
+    this.apiService = new ApiService(this.storageService);
     this.authService = new AuthService(this.storageService, this.notificationManager);
 
     // Track initialization state to prevent race conditions
@@ -53,8 +53,14 @@ export class BitcoinMini {
       // Update PIN attempt display and start updater if needed
       this.updatePinAttemptDisplay();
 
+      // Load persistent cache data from storage
+      await this.apiService.loadCacheFromPersistentStorage();
+
       // Load cached balance data for immediate display
       await this.loadCachedBalances();
+
+      // Display any cached price/fee data immediately before API calls
+      this.displayCachedData();
 
       // Conservative data refresh logic
       await this.intelligentDataRefresh();
@@ -402,13 +408,14 @@ export class BitcoinMini {
   // API methods
   async refreshPriceIfNeeded(force = false) {
     try {
-      // Show cached data immediately if available
+      // Always show cached data immediately if available, regardless of force parameter
       const cachedData = this.apiService.getCachedData();
-      if (cachedData.price && !force) {
+      if (cachedData.price) {
         this.uiManager.displayPriceData(cachedData.price);
         this.uiManager.currentBtcPrice = cachedData.price.currentPrice || 0;
         this.uiManager.renderWatchlist(); // Update USD values with cached price
       } else {
+        // Only show loading if no cached data exists at all
         this.uiManager.displayPriceLoading();
       }
 
@@ -416,7 +423,13 @@ export class BitcoinMini {
       const priceData = await this.apiService.refreshPriceIfNeeded(currency, force);
 
       if (priceData) {
-        this.uiManager.displayPriceData(priceData);
+        // Add fresh data indicator
+        const priceDataWithFreshIndicator = {
+          ...priceData,
+          time: '⚡ Just updated',
+          timeClass: 'cache-fresh'
+        };
+        this.uiManager.displayPriceData(priceDataWithFreshIndicator);
         this.uiManager.currentBtcPrice = priceData.currentPrice || 0;
         this.uiManager.renderWatchlist(); // Update USD values with fresh data
       }
@@ -428,15 +441,21 @@ export class BitcoinMini {
 
   async refreshFeesIfNeeded(force = false) {
     try {
-      // Show cached fees immediately if available
+      // Always show cached fees immediately if available, regardless of force parameter
       const cachedData = this.apiService.getCachedData();
-      if (cachedData.fees && !force) {
+      if (cachedData.fees) {
         this.uiManager.displayFeesData(cachedData.fees);
       }
 
       const feesData = await this.apiService.refreshFeesIfNeeded(force);
       if (feesData) {
-        this.uiManager.displayFeesData(feesData);
+        // Add fresh data indicator
+        const feesDataWithFreshIndicator = {
+          ...feesData,
+          time: '⚡ Just updated',
+          timeClass: 'cache-fresh'
+        };
+        this.uiManager.displayFeesData(feesDataWithFreshIndicator);
       }
     } catch (error) {
       console.error('Fees refresh error:', error);
@@ -447,10 +466,48 @@ export class BitcoinMini {
   displayCachedData() {
     const cached = this.apiService.getCachedData();
     if (cached.price) {
-      this.uiManager.displayPriceData(cached.price);
+      // Add cache age indicator to price data
+      const cacheAge = this.getCacheAgeText(cached.price.timestamp);
+      const priceDataWithAge = {
+        ...cached.price,
+        time: cacheAge.text,
+        timeClass: cacheAge.class
+      };
+      this.uiManager.displayPriceData(priceDataWithAge);
+      this.uiManager.currentBtcPrice = cached.price.currentPrice || 0;
+      console.log('⚡ [CACHE] Displayed cached price data:', cached.price.currentPrice, cacheAge.text);
     }
     if (cached.fees) {
-      this.uiManager.displayFeesData(cached.fees);
+      // Add cache age indicator to fee data
+      const cacheAge = this.getCacheAgeText(cached.fees.timestamp);
+      const feesDataWithAge = {
+        ...cached.fees,
+        time: cacheAge.text,
+        timeClass: cacheAge.class
+      };
+      this.uiManager.displayFeesData(feesDataWithAge);
+      console.log('⚡ [CACHE] Displayed cached fee data', cacheAge.text);
+    }
+  }
+
+  getCacheAgeText(timestamp) {
+    if (!timestamp) return { text: '', class: '' };
+
+    const now = Date.now();
+    const ageMs = now - timestamp;
+    const ageMinutes = Math.floor(ageMs / 60000);
+    const ageSeconds = Math.floor(ageMs / 1000);
+
+    if (ageMinutes >= 10) {
+      return { text: `📄 ${ageMinutes}m ago`, class: 'cache-very-stale' };
+    } else if (ageMinutes >= 5) {
+      return { text: `📄 ${ageMinutes}m ago`, class: 'cache-stale' };
+    } else if (ageMinutes > 0) {
+      return { text: `📄 ${ageMinutes}m ago`, class: 'cache-stale' };
+    } else if (ageSeconds > 10) {
+      return { text: `📄 ${ageSeconds}s ago`, class: 'cache-fresh' };
+    } else {
+      return { text: `⚡ Just updated`, class: 'cache-fresh' };
     }
   }
 

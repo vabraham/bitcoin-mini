@@ -339,4 +339,52 @@ export class StorageService {
       throw error;
     }
   }
+
+  // Persistent cache management
+  async saveCacheData(cacheData) {
+    try {
+      await browser.storage.local.set({
+        apiCache: {
+          timestamp: Date.now(),
+          data: cacheData
+        }
+      });
+      console.log('💾 [PERSISTENT CACHE] Saved cache data to storage');
+      return true;
+    } catch (error) {
+      console.error('Error saving cache data:', error);
+      return false;
+    }
+  }
+
+  async loadCacheData() {
+    try {
+      const result = await browser.storage.local.get(['apiCache']);
+      if (result.apiCache && result.apiCache.data) {
+        const cacheAge = Date.now() - result.apiCache.timestamp;
+        // Only use cache if it's less than 15 minutes old
+        if (cacheAge < (15 * 60 * 1000)) {
+          console.log('💾 [PERSISTENT CACHE] Loaded cache data from storage, age:', Math.floor(cacheAge / 60000), 'minutes');
+          return result.apiCache.data;
+        } else {
+          console.log('💾 [PERSISTENT CACHE] Cache data too old, ignoring');
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error('Error loading cache data:', error);
+      return null;
+    }
+  }
+
+  async clearCacheData() {
+    try {
+      await browser.storage.local.remove(['apiCache']);
+      console.log('💾 [PERSISTENT CACHE] Cleared cache data from storage');
+      return true;
+    } catch (error) {
+      console.error('Error clearing cache data:', error);
+      return false;
+    }
+  }
 }

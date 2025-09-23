@@ -1,7 +1,7 @@
 import { CONFIG } from '../config.js';
 
 export class ApiService {
-  constructor() {
+  constructor(storageService = null) {
     this.lastPriceUpdate = 0;
     this.lastFeesUpdate = 0;
     this.priceCache = null;
@@ -9,6 +9,7 @@ export class ApiService {
     this.balanceCache = new Map(); // Cache for address balances
     this.isRateLimited = false;
     this.retryCount = 0;
+    this.storageService = storageService; // For persistent caching
   }
 
   // Centralized API Error Handling
@@ -155,6 +156,9 @@ export class ApiService {
         data: priceData
       };
 
+      // Save to persistent storage
+      await this.saveCacheToPersistentStorage();
+
       return priceData;
 
     } catch (error) {
@@ -206,6 +210,9 @@ export class ApiService {
         timestamp: this.lastFeesUpdate,
         data: feesData
       };
+
+      // Save to persistent storage
+      await this.saveCacheToPersistentStorage();
 
       return feesData;
 
@@ -498,5 +505,40 @@ export class ApiService {
     this.priceCache = null;
     this.feesCache = null;
     this.balanceCache.clear();
+  }
+
+  // Persistent cache management
+  async saveCacheToPersistentStorage() {
+    if (!this.storageService) return;
+
+    try {
+      const cacheData = {
+        price: this.priceCache || null,
+        fees: this.feesCache || null,
+        lastPriceUpdate: this.lastPriceUpdate,
+        lastFeesUpdate: this.lastFeesUpdate
+      };
+
+      await this.storageService.saveCacheData(cacheData);
+    } catch (error) {
+      console.error('Error saving cache to persistent storage:', error);
+    }
+  }
+
+  async loadCacheFromPersistentStorage() {
+    if (!this.storageService) return;
+
+    try {
+      const cacheData = await this.storageService.loadCacheData();
+      if (cacheData) {
+        this.priceCache = cacheData.price || null;
+        this.feesCache = cacheData.fees || null;
+        this.lastPriceUpdate = cacheData.lastPriceUpdate || 0;
+        this.lastFeesUpdate = cacheData.lastFeesUpdate || 0;
+        console.log('💾 [PERSISTENT CACHE] Restored cache from storage');
+      }
+    } catch (error) {
+      console.error('Error loading cache from persistent storage:', error);
+    }
   }
 }

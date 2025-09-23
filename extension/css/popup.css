@@ -799,3 +799,48 @@ th, td {
 .unit-btn.active:hover {
   background: #e09900;
 }
+
+/* Cache status indicators */
+.cache-fresh {
+  color: #27ae60 !important;
+  font-weight: 500;
+}
+
+.cache-stale {
+  color: #f39c12 !important;
+  font-style: italic;
+}
+
+.cache-very-stale {
+  color: #e67e22 !important;
+  font-style: italic;
+  opacity: 0.8;
+}
+
+/* Enhanced loading states */
+.loading-shimmer {
+  animation: shimmer 1.5s infinite;
+  background: linear-gradient(90deg, #333 25%, #555 50%, #333 75%);
+  background-size: 200% 100%;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Error state improvements */
+.error-state {
+  color: #e74c3c;
+  font-style: italic;
+}
+
+.retry-available {
+  color: #f39c12;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.retry-available:hover {
+  color: #e67e22;
+}
