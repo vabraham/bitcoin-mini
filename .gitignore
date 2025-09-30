@@ -78,3 +78,7 @@ store_images/
 
 # Development debugging tools
 debug-storage.html
+
+# Market research and strategy documents
+MARKET_RESEARCH_REPORT.md
+LIGHTNING_INTEGRATION_ANALYSIS.md
