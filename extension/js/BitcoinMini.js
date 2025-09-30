@@ -998,19 +998,13 @@ export class BitcoinMini {
     const symbol = currency === 'USD' ? '$' : currency.toUpperCase();
 
     if (alert.enabled) {
-      alertStatus.textContent = `✓ Alert active: You'll be notified when Bitcoin goes above ${symbol}${alert.threshold.toLocaleString()}`;
-      alertStatus.className = 'alert-active';
+      alertStatus.textContent = `Alert active - you'll be notified when Bitcoin goes above ${symbol}${alert.threshold.toLocaleString()}`;
+      alertStatus.className = 'alert-status-message alert-active';
       alertStatus.style.display = 'block';
-      alertStatus.style.background = 'rgba(16, 185, 129, 0.1)';
-      alertStatus.style.color = '#10b981';
-      alertStatus.style.borderLeft = '3px solid #10b981';
     } else {
-      alertStatus.textContent = '○ Alert disabled';
-      alertStatus.className = 'alert-disabled';
+      alertStatus.textContent = 'Alert is currently disabled';
+      alertStatus.className = 'alert-status-message alert-disabled';
       alertStatus.style.display = 'block';
-      alertStatus.style.background = 'rgba(107, 114, 128, 0.1)';
-      alertStatus.style.color = '#9ca3af';
-      alertStatus.style.borderLeft = '3px solid #6b7280';
     }
   }
 

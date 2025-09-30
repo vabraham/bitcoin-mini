@@ -394,48 +394,46 @@
     
     <!-- Price Alerts Modal -->
     <div id="alertsModal" class="modal-overlay" style="display: none;">
-      <div class="modal-content">
-        <h3>Price Alerts 🔔</h3>
+      <div class="modal-content alert-modal-content">
+        <h3 style="margin: 0 0 16px 0; color: #f2a900; font-size: 18px; font-weight: 600;">Price Alerts 🔔</h3>
 
         <!-- Current Price Display -->
-        <div class="alert-current-price" style="text-align: center; margin: 12px 0; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 6px;">
-          <div style="font-size: 12px; color: #8aa0b6;">Current Bitcoin Price</div>
-          <div style="font-size: 24px; font-weight: bold; margin-top: 4px;" id="alertCurrentPrice">Loading...</div>
+        <div class="alert-current-price">
+          <div class="alert-price-label">Current Bitcoin Price</div>
+          <div class="alert-price-value" id="alertCurrentPrice">Loading...</div>
         </div>
 
-        <!-- Create Alert Section -->
-        <div class="create-alert-section" style="background: rgba(255,255,255,0.05); padding: 16px; border-radius: 6px; margin-bottom: 16px;">
-          <h4 style="margin: 0 0 12px 0;">Set Price Alert</h4>
-
-          <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 12px;">
-            <label style="display: flex; align-items: center; gap: 8px; flex: 1;">
-              <span style="color: #8aa0b6; font-size: 14px;">Alert me when price goes above</span>
-            </label>
+        <!-- Alert Configuration -->
+        <div class="alert-config-section">
+          <div class="alert-config-row">
+            <span class="alert-label">Alert when price goes above</span>
+            <div class="alert-toggle-wrapper">
+              <span class="alert-toggle-label" style="color: #8aa0b6; font-size: 12px; margin-right: 8px;">Off</span>
+              <label class="toggle-switch">
+                <input type="checkbox" id="alertEnabled">
+                <span class="toggle-slider"></span>
+              </label>
+              <span class="alert-toggle-label" style="color: #1dd1a1; font-size: 12px; margin-left: 8px;">On</span>
+            </div>
           </div>
 
-          <div style="display: flex; gap: 8px; align-items: center;">
-            <span style="color: #8aa0b6; font-size: 20px; font-weight: bold;">$</span>
-            <input type="number" id="alertThreshold" placeholder="100000"
-                   style="flex: 1; padding: 8px 12px; font-size: 16px; background: #0b1220; border: 1px solid #333; color: #e0e7ed; border-radius: 4px;">
-            <span id="alertCurrency" style="color: #8aa0b6; font-weight: bold;">USD</span>
+          <div class="alert-threshold-input-wrapper">
+            <div class="alert-input-container">
+              <span class="alert-input-prefix">$</span>
+              <input type="number" id="alertThreshold" placeholder="100000" class="alert-threshold-input">
+              <span class="alert-input-suffix" id="alertCurrency">USD</span>
+            </div>
           </div>
 
-          <div style="margin-top: 12px;">
-            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-              <input type="checkbox" id="alertEnabled">
-              <span style="font-size: 14px; color: #e0e7ed;">Enable alert</span>
-            </label>
-          </div>
-
-          <div id="alertStatus" style="margin-top: 12px; padding: 8px; border-radius: 4px; font-size: 13px; display: none;">
+          <div id="alertStatus" class="alert-status-message">
             <!-- Status message will be shown here -->
           </div>
         </div>
 
-        <!-- Save Button -->
+        <!-- Buttons -->
         <div class="modal-buttons">
-          <button id="closeAlertsModalBtn" class="cancel-btn">Close</button>
-          <button id="saveAlertBtn" class="confirm-btn">Save Alert</button>
+          <button id="closeAlertsModalBtn" class="secondary-btn">Close</button>
+          <button id="saveAlertBtn" class="primary-btn">Save Alert</button>
         </div>
       </div>
     </div>
