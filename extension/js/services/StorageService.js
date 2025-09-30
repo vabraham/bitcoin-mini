@@ -11,6 +11,11 @@ export class StorageService {
     this.unit = CONFIG.DEFAULTS.UNIT;
     this.currency = CONFIG.DEFAULTS.CURRENCY;
     this.vaultTimeout = CONFIG.DEFAULTS.VAULT_TIMEOUT;
+    this.priceAlert = {
+      enabled: false,
+      threshold: 100000,
+      lastTriggered: null
+    };
     this.isDataLoaded = false;
   }
 
@@ -19,13 +24,19 @@ export class StorageService {
       const result = await browser.storage.local.get([
         'watchlist',
         'vaultTimeout',
-        'currency'
+        'currency',
+        'priceAlert'
       ]);
 
       this.watchlist = Array.isArray(result.watchlist) ? result.watchlist : [];
       this.unit = CONFIG.DEFAULTS.UNIT; // Always default to BTC
       this.vaultTimeout = result.vaultTimeout || CONFIG.DEFAULTS.VAULT_TIMEOUT;
       this.currency = result.currency || CONFIG.DEFAULTS.CURRENCY;
+      this.priceAlert = result.priceAlert || {
+        enabled: false,
+        threshold: 100000,
+        lastTriggered: null
+      };
 
       // Data loaded successfully
 
@@ -35,7 +46,8 @@ export class StorageService {
         watchlist: this.watchlist,
         unit: this.unit,
         currency: this.currency,
-        vaultTimeout: this.vaultTimeout
+        vaultTimeout: this.vaultTimeout,
+        priceAlert: this.priceAlert
       };
     } catch (error) {
       console.error('Error loading data:', error);
@@ -49,7 +61,8 @@ export class StorageService {
       await browser.storage.local.set({
         watchlist: this.watchlist,
         vaultTimeout: this.vaultTimeout,
-        currency: this.currency
+        currency: this.currency,
+        priceAlert: this.priceAlert
       });
 
 
@@ -338,5 +351,26 @@ export class StorageService {
       console.error('Error restoring from backup:', error);
       throw error;
     }
+  }
+
+  // Price Alert Management
+  getPriceAlert() {
+    return this.priceAlert;
+  }
+
+  async updatePriceAlert(updates) {
+    this.priceAlert = { ...this.priceAlert, ...updates };
+    await this.saveData();
+    return this.priceAlert;
+  }
+
+  async setPriceAlertEnabled(enabled) {
+    this.priceAlert.enabled = enabled;
+    await this.saveData();
+  }
+
+  async setPriceAlertThreshold(threshold) {
+    this.priceAlert.threshold = threshold;
+    await this.saveData();
   }
 }

@@ -90,6 +90,9 @@ export class BitcoinMini {
         this.authService.startVaultTimeout();
       }
 
+      // Update alert icon based on current alert state
+      this.updateAlertIcon();
+
       this.isInitialized = true;
       // Initialization complete
     } catch (error) {
@@ -314,6 +317,15 @@ export class BitcoinMini {
       this.uiManager.hideModal('changePinModal');
     }
 
+    // Price Alerts Modal
+    else if (target.id === 'alertsBtn') {
+      this.showAlertsModal();
+    } else if (target.id === 'saveAlertBtn') {
+      this.saveAlertSettings();
+    } else if (target.id === 'closeAlertsModalBtn') {
+      this.uiManager.hideModal('alertsModal');
+    }
+
     // Info buttons and tooltips
     else if (target.id === 'riskInfoBtn') {
       this.handleTooltip('riskTooltip', target);
@@ -425,6 +437,9 @@ export class BitcoinMini {
         this.uiManager.displayPriceData(priceData);
         this.uiManager.currentBtcPrice = priceData.currentPrice || 0;
         this.uiManager.renderWatchlist(); // Update USD values with fresh data
+
+        // Check price alerts after successful price update
+        await this.checkPriceAlert(priceData.currentPrice);
       } else if (this.apiService.isRateLimited && !cachedData.price) {
         // Special case: rate limited with no cached data
         this.uiManager.displayPriceError('Rate limited - try again later');
@@ -848,6 +863,156 @@ export class BitcoinMini {
     }
   }
 
+  // Price Alert Methods
+  async checkPriceAlert(currentPrice) {
+    const alert = this.storageService.getPriceAlert();
+
+    if (!alert || !alert.enabled) return;
+    if (currentPrice <= alert.threshold) return;
+
+    // Check if already triggered in last 15 minutes (prevent spam)
+    const now = Date.now();
+    const cooldownPeriod = 15 * 60 * 1000; // 15 minutes
+
+    if (alert.lastTriggered && (now - alert.lastTriggered) < cooldownPeriod) {
+      console.log('Alert recently triggered, waiting for cooldown period');
+      return;
+    }
+
+    // Trigger alert!
+    console.log(`🚀 Price alert triggered! Current: $${currentPrice}, Threshold: $${alert.threshold}`);
+
+    // Update last triggered time
+    await this.storageService.updatePriceAlert({ lastTriggered: now });
+
+    // Update alert icon to show triggered state
+    this.updateAlertIcon(true);
+
+    // Show notification
+    const currency = this.storageService.getCurrency();
+    await this.notificationManager.showPriceAlert(currentPrice, alert.threshold, currency);
+
+    // Clear triggered animation after 3 seconds
+    setTimeout(() => {
+      this.updateAlertIcon(false);
+    }, 3000);
+  }
+
+  updateAlertIcon(triggered = false) {
+    const alertIcon = document.getElementById('alertsBtn');
+    if (!alertIcon) return;
+
+    const alert = this.storageService.getPriceAlert();
+
+    // Remove all states
+    alertIcon.classList.remove('has-alerts', 'alert-triggered');
+
+    if (triggered) {
+      alertIcon.classList.add('alert-triggered');
+    } else if (alert && alert.enabled) {
+      alertIcon.classList.add('has-alerts');
+    }
+  }
+
+  async showAlertsModal() {
+    // Update current price in modal
+    const currentPrice = this.uiManager.currentBtcPrice;
+    const currency = this.storageService.getCurrency();
+    const alertCurrentPrice = document.getElementById('alertCurrentPrice');
+
+    if (alertCurrentPrice && currentPrice > 0) {
+      const symbol = currency === 'USD' ? '$' : currency.toUpperCase();
+      alertCurrentPrice.textContent = `${symbol}${currentPrice.toLocaleString('en-US', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      })}`;
+    }
+
+    // Load current alert settings
+    const alert = this.storageService.getPriceAlert();
+    const alertThreshold = document.getElementById('alertThreshold');
+    const alertEnabled = document.getElementById('alertEnabled');
+    const alertCurrency = document.getElementById('alertCurrency');
+
+    if (alertThreshold) alertThreshold.value = alert.threshold;
+    if (alertEnabled) alertEnabled.checked = alert.enabled;
+    if (alertCurrency) alertCurrency.textContent = currency.toUpperCase();
+
+    // Update status display
+    this.updateAlertStatus();
+
+    // Show modal
+    this.uiManager.showModal('alertsModal');
+
+    // Request notification permission if enabling alert
+    if (alert.enabled) {
+      const hasPermission = await this.notificationManager.requestNotificationPermission();
+      if (!hasPermission) {
+        this.notificationManager.showWarning('Notification permission denied - alerts will be in-app only');
+      }
+    }
+  }
+
+  async saveAlertSettings() {
+    const alertThreshold = document.getElementById('alertThreshold');
+    const alertEnabled = document.getElementById('alertEnabled');
+
+    const threshold = parseFloat(alertThreshold?.value) || 100000;
+    const enabled = alertEnabled?.checked || false;
+
+    // Request notification permission when enabling
+    if (enabled) {
+      const hasPermission = await this.notificationManager.requestNotificationPermission();
+      if (!hasPermission) {
+        this.notificationManager.showWarning('Notification permission denied - alerts will be in-app only');
+      }
+    }
+
+    // Save alert settings
+    await this.storageService.updatePriceAlert({
+      enabled: enabled,
+      threshold: threshold
+    });
+
+    // Update icon state
+    this.updateAlertIcon();
+
+    // Update status display
+    this.updateAlertStatus();
+
+    // Show confirmation
+    if (enabled) {
+      this.notificationManager.showAlertSaved();
+    } else {
+      this.notificationManager.showAlertDisabled();
+    }
+  }
+
+  updateAlertStatus() {
+    const alert = this.storageService.getPriceAlert();
+    const alertStatus = document.getElementById('alertStatus');
+
+    if (!alertStatus) return;
+
+    const currency = this.storageService.getCurrency();
+    const symbol = currency === 'USD' ? '$' : currency.toUpperCase();
+
+    if (alert.enabled) {
+      alertStatus.textContent = `✓ Alert active: You'll be notified when Bitcoin goes above ${symbol}${alert.threshold.toLocaleString()}`;
+      alertStatus.className = 'alert-active';
+      alertStatus.style.display = 'block';
+      alertStatus.style.background = 'rgba(16, 185, 129, 0.1)';
+      alertStatus.style.color = '#10b981';
+      alertStatus.style.borderLeft = '3px solid #10b981';
+    } else {
+      alertStatus.textContent = '○ Alert disabled';
+      alertStatus.className = 'alert-disabled';
+      alertStatus.style.display = 'block';
+      alertStatus.style.background = 'rgba(107, 114, 128, 0.1)';
+      alertStatus.style.color = '#9ca3af';
+      alertStatus.style.borderLeft = '3px solid #6b7280';
+    }
+  }
 
   // Visibility change listener for conservative refresh
   setupVisibilityListener() {

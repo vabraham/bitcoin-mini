@@ -799,3 +799,95 @@ th, td {
 .unit-btn.active:hover {
   background: #e09900;
 }
+
+/* Price Alert Icon Styles */
+.icon-btn {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  min-height: 36px;
+}
+
+.icon-btn:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.2);
+}
+
+.icon-btn svg {
+  color: #8aa0b6;
+  transition: color 0.2s;
+}
+
+.icon-btn:hover svg {
+  color: #e0e7ed;
+}
+
+/* Alert icon active state */
+.icon-btn.has-alerts svg {
+  color: #4a90e2;
+}
+
+/* Alert icon triggered state - pulse animation */
+.icon-btn.alert-triggered svg {
+  color: #10b981;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Badge for alert count */
+.badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #dc2626;
+  color: white;
+  font-size: 10px;
+  font-weight: bold;
+  padding: 2px 5px;
+  border-radius: 10px;
+  min-width: 16px;
+  text-align: center;
+}
+
+/* Create alert section styles */
+.create-alert-section {
+  background: rgba(255,255,255,0.05);
+  padding: 16px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}
+
+.create-alert-section h4 {
+  margin: 0 0 12px 0;
+  color: #e0e7ed;
+  font-size: 14px;
+}
+
+/* Alert status message styles */
+#alertStatus {
+  border-left: 3px solid #10b981;
+}
+
+#alertStatus.alert-disabled {
+  border-left-color: #6b7280;
+  background: rgba(107, 114, 128, 0.1);
+  color: #9ca3af;
+}
+
+#alertStatus.alert-active {
+  border-left-color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}

@@ -6,7 +6,7 @@
   "author": "vabraham",
   "homepage_url": "https://github.com/vabraham/bitcoin-mini",
   
-  "permissions": ["storage"],
+  "permissions": ["storage", "notifications"],
   
   "host_permissions": [
     "https://api.coingecko.com/*",

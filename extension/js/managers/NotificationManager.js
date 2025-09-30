@@ -249,4 +249,72 @@ export class NotificationManager {
       }, 300);
     }, duration);
   }
+
+  // Browser Notification Support
+  async requestNotificationPermission() {
+    if (!('Notification' in window)) {
+      console.warn('This browser does not support notifications');
+      return false;
+    }
+
+    if (Notification.permission === 'granted') {
+      return true;
+    }
+
+    if (Notification.permission !== 'denied') {
+      const permission = await Notification.requestPermission();
+      return permission === 'granted';
+    }
+
+    return false;
+  }
+
+  // Price Alert Notifications
+  async showPriceAlert(currentPrice, threshold, currency = 'USD') {
+    const symbol = currency === 'USD' ? '$' : currency;
+    const formattedPrice = `${symbol}${currentPrice.toLocaleString('en-US', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    })}`;
+    const formattedThreshold = `${symbol}${threshold.toLocaleString('en-US', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    })}`;
+
+    const title = 'Bitcoin Mini - Price Alert! 🚀';
+    const message = `Bitcoin is now ${formattedPrice} (above your ${formattedThreshold} target)`;
+
+    // Show browser notification if permission granted
+    if (Notification.permission === 'granted') {
+      try {
+        const notification = new Notification(title, {
+          body: message,
+          icon: '../icon128.png',
+          badge: '../icon48.png',
+          requireInteraction: true,
+          tag: 'price-alert', // Prevents duplicate notifications
+          silent: false
+        });
+
+        // Focus extension when notification is clicked
+        notification.onclick = () => {
+          window.focus();
+          notification.close();
+        };
+      } catch (error) {
+        console.error('Error showing browser notification:', error);
+      }
+    }
+
+    // Also show in-app notification as fallback
+    this.showSuccess(message);
+  }
+
+  showAlertSaved() {
+    this.showSuccess('Price alert saved successfully');
+  }
+
+  showAlertDisabled() {
+    this.showInfo('Price alert disabled');
+  }
 }
