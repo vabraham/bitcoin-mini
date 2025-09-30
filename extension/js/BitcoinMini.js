@@ -317,12 +317,12 @@ export class BitcoinMini {
       this.uiManager.hideModal('changePinModal');
     }
 
-    // Price Alerts Modal
-    else if (target.id === 'alertsBtn') {
+    // Price Alerts Modal - use closest() to handle SVG clicks
+    else if (target.closest('#alertsBtn')) {
       this.showAlertsModal();
-    } else if (target.id === 'saveAlertBtn') {
+    } else if (target.closest('#saveAlertBtn')) {
       this.saveAlertSettings();
-    } else if (target.id === 'closeAlertsModalBtn') {
+    } else if (target.closest('#closeAlertsModalBtn')) {
       this.uiManager.hideModal('alertsModal');
     }
 
@@ -998,13 +998,11 @@ export class BitcoinMini {
     const symbol = currency === 'USD' ? '$' : currency.toUpperCase();
 
     if (alert.enabled) {
-      alertStatus.textContent = `Alert active - you'll be notified when Bitcoin goes above ${symbol}${alert.threshold.toLocaleString()}`;
-      alertStatus.className = 'alert-status-message alert-active';
-      alertStatus.style.display = 'block';
+      alertStatus.textContent = `✓ Alert active at ${symbol}${alert.threshold.toLocaleString()}`;
+      alertStatus.className = 'alert-status-compact alert-active';
     } else {
-      alertStatus.textContent = 'Alert is currently disabled';
-      alertStatus.className = 'alert-status-message alert-disabled';
-      alertStatus.style.display = 'block';
+      alertStatus.textContent = 'Alert disabled';
+      alertStatus.className = 'alert-status-compact alert-disabled';
     }
   }
 

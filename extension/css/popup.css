@@ -861,78 +861,42 @@ th, td {
   text-align: center;
 }
 
-/* Alert Modal Specific Styles */
-.alert-modal-content {
-  max-width: 420px;
-  padding: 20px;
-}
-
-/* Current Price Display - Improved */
-.alert-current-price {
-  text-align: center;
+/* Compact Alert Modal */
+.alert-modal-compact {
+  max-width: 360px;
   padding: 16px;
-  background: linear-gradient(135deg, rgba(242, 169, 0, 0.08) 0%, rgba(242, 169, 0, 0.03) 100%);
-  border-radius: 8px;
-  border: 1px solid rgba(242, 169, 0, 0.2);
-  margin-bottom: 20px;
 }
 
-.alert-price-label {
-  font-size: 11px;
-  color: #8aa0b6;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 6px;
-}
-
-.alert-price-value {
-  font-size: 32px;
-  font-weight: 700;
-  color: #f2a900;
-  letter-spacing: -0.5px;
-}
-
-/* Alert Configuration Section */
-.alert-config-section {
-  background: rgba(255,255,255,0.03);
-  padding: 16px;
-  border-radius: 8px;
-  margin-bottom: 16px;
-}
-
-.alert-config-row {
+/* Compact Header: Title + Toggle inline */
+.alert-header-compact {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
-.alert-label {
-  font-size: 14px;
-  color: #e0e7ed;
-  font-weight: 500;
+.alert-header-compact h3 {
+  margin: 0;
+  font-size: 15px;
+  color: #f2a900;
+  font-weight: 600;
 }
 
-/* Toggle Switch - iOS Style */
-.alert-toggle-wrapper {
-  display: flex;
-  align-items: center;
-}
-
-.toggle-switch {
+/* Compact Toggle Switch */
+.toggle-switch-compact {
   position: relative;
   display: inline-block;
-  width: 48px;
-  height: 26px;
+  width: 38px;
+  height: 22px;
 }
 
-.toggle-switch input {
+.toggle-switch-compact input {
   opacity: 0;
   width: 0;
   height: 0;
 }
 
-.toggle-slider {
+.toggle-slider-compact {
   position: absolute;
   cursor: pointer;
   top: 0;
@@ -940,146 +904,175 @@ th, td {
   right: 0;
   bottom: 0;
   background-color: #333;
-  transition: 0.3s;
-  border-radius: 26px;
+  transition: 0.25s;
+  border-radius: 22px;
 }
 
-.toggle-slider:before {
+.toggle-slider-compact:before {
   position: absolute;
   content: "";
-  height: 20px;
-  width: 20px;
+  height: 16px;
+  width: 16px;
   left: 3px;
   bottom: 3px;
   background-color: #666;
-  transition: 0.3s;
+  transition: 0.25s;
   border-radius: 50%;
 }
 
-.toggle-switch input:checked + .toggle-slider {
+.toggle-switch-compact input:checked + .toggle-slider-compact {
   background-color: #1dd1a1;
 }
 
-.toggle-switch input:checked + .toggle-slider:before {
-  transform: translateX(22px);
+.toggle-switch-compact input:checked + .toggle-slider-compact:before {
+  transform: translateX(16px);
   background-color: white;
 }
 
-.toggle-switch input:focus + .toggle-slider {
-  box-shadow: 0 0 1px #1dd1a1;
-}
-
-/* Alert Threshold Input */
-.alert-threshold-input-wrapper {
-  margin-bottom: 12px;
-}
-
-.alert-input-container {
+/* Compact Input Row: Current Price | Input */
+.alert-input-row-compact {
   display: flex;
   align-items: center;
+  gap: 12px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.current-price-compact {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.target-price-compact {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.compact-label {
+  font-size: 10px;
+  color: #8aa0b6;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+.compact-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #f2a900;
+}
+
+.vertical-divider {
+  width: 1px;
+  height: 40px;
+  background: rgba(255,255,255,0.1);
+}
+
+/* Compact Input */
+.compact-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   background: #0b1220;
   border: 1px solid #333;
-  border-radius: 6px;
-  padding: 0 12px;
+  border-radius: 4px;
+  padding: 4px 8px;
   transition: border-color 0.2s;
 }
 
-.alert-input-container:focus-within {
+.compact-input-wrapper:focus-within {
   border-color: #f2a900;
 }
 
-.alert-input-prefix {
+.compact-dollar {
   color: #f2a900;
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 600;
-  margin-right: 8px;
 }
 
-.alert-threshold-input {
-  flex: 1;
+.compact-input {
   background: transparent;
   border: none;
-  padding: 10px 0;
-  font-size: 18px;
+  width: 70px;
+  padding: 4px 0;
+  font-size: 14px;
   color: #e0e7ed;
   font-weight: 500;
   outline: none;
 }
 
-.alert-threshold-input::placeholder {
+.compact-input::placeholder {
   color: #4a5568;
 }
 
-.alert-input-suffix {
-  color: #8aa0b6;
-  font-size: 13px;
-  font-weight: 600;
-  margin-left: 8px;
-}
-
-/* Alert Status Message - Refined */
-.alert-status-message {
-  margin-top: 12px;
-  padding: 10px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  line-height: 1.4;
+/* Compact Status Badge */
+.alert-status-compact {
+  font-size: 11px;
+  text-align: center;
+  padding: 6px 10px;
+  border-radius: 12px;
+  margin-bottom: 8px;
   display: none;
 }
 
-.alert-status-message.alert-active {
-  background: rgba(29, 209, 161, 0.1);
-  border-left: 3px solid #1dd1a1;
+.alert-status-compact.alert-active {
+  background: rgba(29, 209, 161, 0.15);
   color: #1dd1a1;
+  display: block;
 }
 
-.alert-status-message.alert-disabled {
-  background: rgba(138, 160, 182, 0.1);
-  border-left: 3px solid #8aa0b6;
+.alert-status-compact.alert-disabled {
+  background: rgba(138, 160, 182, 0.15);
   color: #8aa0b6;
+  display: block;
 }
 
-/* Button Hierarchy - Primary/Secondary */
-.primary-btn {
+/* Compact Buttons */
+.modal-buttons-compact {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.btn-primary-compact {
   background: #f2a900;
   color: #000;
   border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
+  padding: 8px 16px;
+  border-radius: 5px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.primary-btn:hover {
+.btn-primary-compact:hover {
   background: #e09900;
   transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(242, 169, 0, 0.3);
 }
 
-.primary-btn:active {
-  transform: translateY(0);
-}
-
-.secondary-btn {
-  background: rgba(255,255,255,0.05);
+.btn-text-compact {
+  background: transparent;
   color: #8aa0b6;
-  border: 1px solid rgba(255,255,255,0.1);
-  padding: 10px 20px;
-  border-radius: 6px;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 5px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
 }
 
-.secondary-btn:hover {
-  background: rgba(255,255,255,0.08);
+.btn-text-compact:hover {
+  background: rgba(255,255,255,0.05);
   color: #e0e7ed;
-}
-
-.modal-buttons {
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-  margin-top: 16px;
 }

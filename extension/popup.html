@@ -392,49 +392,46 @@
       </div>
     </div>
     
-    <!-- Price Alerts Modal -->
+    <!-- Price Alerts Modal - Compact Design -->
     <div id="alertsModal" class="modal-overlay" style="display: none;">
-      <div class="modal-content alert-modal-content">
-        <h3 style="margin: 0 0 16px 0; color: #f2a900; font-size: 18px; font-weight: 600;">Price Alerts 🔔</h3>
+      <div class="modal-content alert-modal-compact">
 
-        <!-- Current Price Display -->
-        <div class="alert-current-price">
-          <div class="alert-price-label">Current Bitcoin Price</div>
-          <div class="alert-price-value" id="alertCurrentPrice">Loading...</div>
+        <!-- Header with inline toggle -->
+        <div class="alert-header-compact">
+          <h3>Price Alerts 🔔</h3>
+          <label class="toggle-switch-compact">
+            <input type="checkbox" id="alertEnabled">
+            <span class="toggle-slider-compact"></span>
+          </label>
         </div>
 
-        <!-- Alert Configuration -->
-        <div class="alert-config-section">
-          <div class="alert-config-row">
-            <span class="alert-label">Alert when price goes above</span>
-            <div class="alert-toggle-wrapper">
-              <span class="alert-toggle-label" style="color: #8aa0b6; font-size: 12px; margin-right: 8px;">Off</span>
-              <label class="toggle-switch">
-                <input type="checkbox" id="alertEnabled">
-                <span class="toggle-slider"></span>
-              </label>
-              <span class="alert-toggle-label" style="color: #1dd1a1; font-size: 12px; margin-left: 8px;">On</span>
+        <!-- Compact input row: current price | input -->
+        <div class="alert-input-row-compact">
+          <div class="current-price-compact">
+            <span class="compact-label">Current</span>
+            <span id="alertCurrentPrice" class="compact-value">$114,323</span>
+          </div>
+
+          <div class="vertical-divider"></div>
+
+          <div class="target-price-compact">
+            <span class="compact-label">Alert above</span>
+            <div class="compact-input-wrapper">
+              <span class="compact-dollar">$</span>
+              <input type="number" id="alertThreshold" placeholder="115000" class="compact-input">
             </div>
           </div>
-
-          <div class="alert-threshold-input-wrapper">
-            <div class="alert-input-container">
-              <span class="alert-input-prefix">$</span>
-              <input type="number" id="alertThreshold" placeholder="100000" class="alert-threshold-input">
-              <span class="alert-input-suffix" id="alertCurrency">USD</span>
-            </div>
-          </div>
-
-          <div id="alertStatus" class="alert-status-message">
-            <!-- Status message will be shown here -->
-          </div>
         </div>
 
-        <!-- Buttons -->
-        <div class="modal-buttons">
-          <button id="closeAlertsModalBtn" class="secondary-btn">Close</button>
-          <button id="saveAlertBtn" class="primary-btn">Save Alert</button>
+        <!-- Compact status badge -->
+        <div id="alertStatus" class="alert-status-compact"></div>
+
+        <!-- Compact buttons -->
+        <div class="modal-buttons-compact">
+          <button id="closeAlertsModalBtn" class="btn-text-compact">Close</button>
+          <button id="saveAlertBtn" class="btn-primary-compact">Save Alert</button>
         </div>
+
       </div>
     </div>
 
