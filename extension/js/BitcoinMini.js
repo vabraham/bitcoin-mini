@@ -867,8 +867,12 @@ export class BitcoinMini {
   async checkPriceAlert(currentPrice) {
     const alert = this.storageService.getPriceAlert();
 
-    if (!alert || !alert.enabled) return;
-    if (currentPrice <= alert.threshold) return;
+    if (!alert) return;
+
+    const targetEnabled = alert.target?.enabled;
+    const percentEnabled = alert.percent?.enabled;
+
+    if (!targetEnabled && !percentEnabled) return;
 
     // Check if already triggered in last 15 minutes (prevent spam)
     const now = Date.now();
@@ -879,8 +883,42 @@ export class BitcoinMini {
       return;
     }
 
+    let triggered = false;
+    const reasons = [];
+
+    // Check target value alert
+    if (targetEnabled) {
+      const targetValue = alert.target.value;
+      const targetDirection = alert.target.direction;
+
+      if (targetDirection === 'above' && currentPrice >= targetValue) {
+        triggered = true;
+        reasons.push(`above $${targetValue.toLocaleString()}`);
+      } else if (targetDirection === 'below' && currentPrice <= targetValue) {
+        triggered = true;
+        reasons.push(`below $${targetValue.toLocaleString()}`);
+      }
+    }
+
+    // Check percentage alert (calculate from initial price)
+    if (percentEnabled && this.uiManager.initialBtcPrice) {
+      const percentValue = alert.percent.value;
+      const percentDirection = alert.percent.direction;
+      const percentChange = ((currentPrice - this.uiManager.initialBtcPrice) / this.uiManager.initialBtcPrice) * 100;
+
+      if (percentDirection === 'above' && percentChange >= percentValue) {
+        triggered = true;
+        reasons.push(`+${percentValue}%`);
+      } else if (percentDirection === 'below' && percentChange <= -percentValue) {
+        triggered = true;
+        reasons.push(`-${percentValue}%`);
+      }
+    }
+
+    if (!triggered) return;
+
     // Trigger alert!
-    console.log(`🚀 Price alert triggered! Current: $${currentPrice}, Threshold: $${alert.threshold}`);
+    console.log(`🚀 Price alert triggered! Current: $${currentPrice}, Reasons: ${reasons.join(', ')}`);
 
     // Update last triggered time
     await this.storageService.updatePriceAlert({ lastTriggered: now });
@@ -890,7 +928,8 @@ export class BitcoinMini {
 
     // Show notification
     const currency = this.storageService.getCurrency();
-    await this.notificationManager.showPriceAlert(currentPrice, alert.threshold, currency);
+    const message = `Bitcoin is now $${currentPrice.toLocaleString()} (${reasons.join(' or ')})`;
+    await this.notificationManager.showSuccess(message);
 
     // Clear triggered animation after 3 seconds
     setTimeout(() => {
@@ -909,7 +948,7 @@ export class BitcoinMini {
 
     if (triggered) {
       alertIcon.classList.add('alert-triggered');
-    } else if (alert && alert.enabled) {
+    } else if (alert && (alert.target?.enabled || alert.percent?.enabled)) {
       alertIcon.classList.add('has-alerts');
     }
   }
@@ -921,7 +960,7 @@ export class BitcoinMini {
     const alertCurrentPrice = document.getElementById('alertCurrentPrice');
 
     if (alertCurrentPrice && currentPrice > 0) {
-      const symbol = currency === 'USD' ? '$' : currency.toUpperCase();
+      const symbol = currency.toLowerCase() === 'usd' ? '$' : currency.toUpperCase();
       alertCurrentPrice.textContent = `${symbol}${currentPrice.toLocaleString('en-US', {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0
@@ -930,13 +969,24 @@ export class BitcoinMini {
 
     // Load current alert settings
     const alert = this.storageService.getPriceAlert();
-    const alertThreshold = document.getElementById('alertThreshold');
-    const alertEnabled = document.getElementById('alertEnabled');
-    const alertCurrency = document.getElementById('alertCurrency');
 
-    if (alertThreshold) alertThreshold.value = alert.threshold;
-    if (alertEnabled) alertEnabled.checked = alert.enabled;
-    if (alertCurrency) alertCurrency.textContent = currency.toUpperCase();
+    // Target Value inputs
+    const alertTargetValue = document.getElementById('alertTargetValue');
+    const alertTargetDirection = document.getElementById('alertTargetDirection');
+    const alertTargetEnabled = document.getElementById('alertTargetEnabled');
+
+    // Percentage inputs
+    const alertPercentValue = document.getElementById('alertPercentValue');
+    const alertPercentDirection = document.getElementById('alertPercentDirection');
+    const alertPercentEnabled = document.getElementById('alertPercentEnabled');
+
+    if (alertTargetValue && alert?.target) alertTargetValue.value = alert.target.value;
+    if (alertTargetDirection && alert?.target) alertTargetDirection.value = alert.target.direction;
+    if (alertTargetEnabled && alert?.target) alertTargetEnabled.checked = alert.target.enabled;
+
+    if (alertPercentValue && alert?.percent) alertPercentValue.value = alert.percent.value;
+    if (alertPercentDirection && alert?.percent) alertPercentDirection.value = alert.percent.direction;
+    if (alertPercentEnabled && alert?.percent) alertPercentEnabled.checked = alert.percent.enabled;
 
     // Update status display
     this.updateAlertStatus();
@@ -944,8 +994,8 @@ export class BitcoinMini {
     // Show modal
     this.uiManager.showModal('alertsModal');
 
-    // Request notification permission if enabling alert
-    if (alert.enabled) {
+    // Request notification permission if any alert is enabled
+    if (alert.target.enabled || alert.percent.enabled) {
       const hasPermission = await this.notificationManager.requestNotificationPermission();
       if (!hasPermission) {
         this.notificationManager.showWarning('Notification permission denied - alerts will be in-app only');
@@ -954,24 +1004,44 @@ export class BitcoinMini {
   }
 
   async saveAlertSettings() {
-    const alertThreshold = document.getElementById('alertThreshold');
-    const alertEnabled = document.getElementById('alertEnabled');
+    // Get Target Value settings
+    const alertTargetValue = document.getElementById('alertTargetValue');
+    const alertTargetDirection = document.getElementById('alertTargetDirection');
+    const alertTargetEnabled = document.getElementById('alertTargetEnabled');
 
-    const threshold = parseFloat(alertThreshold?.value) || 100000;
-    const enabled = alertEnabled?.checked || false;
+    // Get Percentage settings
+    const alertPercentValue = document.getElementById('alertPercentValue');
+    const alertPercentDirection = document.getElementById('alertPercentDirection');
+    const alertPercentEnabled = document.getElementById('alertPercentEnabled');
 
-    // Request notification permission when enabling
-    if (enabled) {
+    const targetValue = parseFloat(alertTargetValue?.value) || 100000;
+    const targetDirection = alertTargetDirection?.value || 'above';
+    const targetEnabled = alertTargetEnabled?.checked || false;
+
+    const percentValue = parseFloat(alertPercentValue?.value) || 5;
+    const percentDirection = alertPercentDirection?.value || 'above';
+    const percentEnabled = alertPercentEnabled?.checked || false;
+
+    // Request notification permission when enabling any alert
+    if (targetEnabled || percentEnabled) {
       const hasPermission = await this.notificationManager.requestNotificationPermission();
       if (!hasPermission) {
         this.notificationManager.showWarning('Notification permission denied - alerts will be in-app only');
       }
     }
 
-    // Save alert settings
+    // Save settings
     await this.storageService.updatePriceAlert({
-      enabled: enabled,
-      threshold: threshold
+      target: {
+        enabled: targetEnabled,
+        value: targetValue,
+        direction: targetDirection
+      },
+      percent: {
+        enabled: percentEnabled,
+        value: percentValue,
+        direction: percentDirection
+      }
     });
 
     // Update icon state
@@ -981,7 +1051,7 @@ export class BitcoinMini {
     this.updateAlertStatus();
 
     // Show confirmation
-    if (enabled) {
+    if (targetEnabled || percentEnabled) {
       this.notificationManager.showAlertSaved();
     } else {
       this.notificationManager.showAlertDisabled();
@@ -995,15 +1065,32 @@ export class BitcoinMini {
     if (!alertStatus) return;
 
     const currency = this.storageService.getCurrency();
-    const symbol = currency === 'USD' ? '$' : currency.toUpperCase();
+    const symbol = currency.toLowerCase() === 'usd' ? '$' : currency.toUpperCase();
 
-    if (alert.enabled) {
-      alertStatus.textContent = `✓ Alert active at ${symbol}${alert.threshold.toLocaleString()}`;
-      alertStatus.className = 'alert-status-compact alert-active';
-    } else {
-      alertStatus.textContent = 'Alert disabled';
+    const targetEnabled = alert.target?.enabled;
+    const percentEnabled = alert.percent?.enabled;
+
+    if (!targetEnabled && !percentEnabled) {
+      alertStatus.textContent = 'Alerts disabled';
       alertStatus.className = 'alert-status-compact alert-disabled';
+      return;
     }
+
+    // Build status message
+    const parts = [];
+
+    if (targetEnabled) {
+      const dir = alert.target.direction === 'above' ? 'Above' : 'Below';
+      parts.push(`${dir} ${symbol}${alert.target.value.toLocaleString()}`);
+    }
+
+    if (percentEnabled) {
+      const dir = alert.percent.direction === 'above' ? '+' : '-';
+      parts.push(`${dir}${alert.percent.value}%`);
+    }
+
+    alertStatus.textContent = `✓ Alert active: ${parts.join(' or ')}`;
+    alertStatus.className = 'alert-status-compact alert-active';
   }
 
   // Visibility change listener for conservative refresh

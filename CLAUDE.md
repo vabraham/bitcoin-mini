@@ -93,6 +93,28 @@ import('./extension/js/utils/AddressValidator.js').then(({ AddressValidator }) =
 # Firefox: about:debugging → This Firefox → Load Temporary Add-on → Select 'extension/manifest.json'
 ```
 
+## Design & UI Guidelines
+
+**CRITICAL**: Before making ANY UI/design changes, you MUST:
+
+1. **Read DESIGN_GUIDE.md** - Contains all design principles, color palette, spacing system, and component patterns
+2. **Follow the design system** - No random colors, spacing, or patterns
+3. **Verify with Playwright MCP** (if available) - Take screenshots to confirm visual accuracy before showing user
+4. **Reference existing patterns** - Look for similar UI in the codebase and maintain consistency
+
+### Key Design Rules
+- **Colors**: Only use colors from DESIGN_GUIDE.md palette (Bitcoin orange #f2a900 for primary actions)
+- **Spacing**: Follow 4px/8px/12px/16px grid system
+- **Layout**: "Right side" = far-right edge (use `justify-content: space-between`), not middle-right
+- **Modals**: Compact (360px, 16px padding) vs Standard (400px, 24px padding)
+- **Buttons**: 8px gap, primary actions use orange, secondary use transparent/gray
+
+### When User Requests Design Changes
+1. Read DESIGN_GUIDE.md to understand the pattern
+2. Check similar existing components for consistency
+3. If using Playwright MCP: verify visually before responding
+4. Ask clarifying questions about positioning (far-right vs middle-right, etc.)
+
 ## Code Quality Guidelines
 
 ### File Structure
@@ -103,7 +125,7 @@ import('./extension/js/utils/AddressValidator.js').then(({ AddressValidator }) =
 
 ### Adding New Features
 1. **Address Validation**: Update `AddressValidator.js` and add tests to `AddressValidatorTest.js`
-2. **UI Changes**: Update `UIManager.js` for DOM manipulation
+2. **UI Changes**: Update `UIManager.js` for DOM manipulation - **MUST follow DESIGN_GUIDE.md**
 3. **Settings**: Update `StorageService.js` for persistence
 4. **API Integration**: Update `ApiService.js` for external calls
 

@@ -12,8 +12,16 @@ export class StorageService {
     this.currency = CONFIG.DEFAULTS.CURRENCY;
     this.vaultTimeout = CONFIG.DEFAULTS.VAULT_TIMEOUT;
     this.priceAlert = {
-      enabled: false,
-      threshold: 100000,
+      target: {
+        enabled: false,
+        value: 100000,
+        direction: 'above'
+      },
+      percent: {
+        enabled: false,
+        value: 5,
+        direction: 'above'
+      },
       lastTriggered: null
     };
     this.isDataLoaded = false;
@@ -33,8 +41,16 @@ export class StorageService {
       this.vaultTimeout = result.vaultTimeout || CONFIG.DEFAULTS.VAULT_TIMEOUT;
       this.currency = result.currency || CONFIG.DEFAULTS.CURRENCY;
       this.priceAlert = result.priceAlert || {
-        enabled: false,
-        threshold: 100000,
+        target: {
+          enabled: false,
+          value: 100000,
+          direction: 'above'
+        },
+        percent: {
+          enabled: false,
+          value: 5,
+          direction: 'above'
+        },
         lastTriggered: null
       };
 

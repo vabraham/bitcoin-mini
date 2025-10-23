@@ -281,7 +281,7 @@ export class NotificationManager {
       maximumFractionDigits: 0
     })}`;
 
-    const title = 'Bitcoin Mini - Price Alert! 🚀';
+    const title = 'Price Alert! 🚀';
     const message = `Bitcoin is now ${formattedPrice} (above your ${formattedThreshold} target)`;
 
     // Show browser notification if permission granted

@@ -832,18 +832,28 @@ th, td {
 
 /* Alert icon active state */
 .icon-btn.has-alerts svg {
-  color: #4a90e2;
+  color: #f2a900;
 }
 
 /* Alert icon triggered state - pulse animation */
 .icon-btn.alert-triggered svg {
-  color: #10b981;
+  color: #f2a900;
   animation: pulse 1.5s ease-in-out infinite;
 }
 
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
+}
+
+/* Pulse Background Animation for Triggered Alerts - Per Design Guide */
+@keyframes pulseBackground {
+  0%, 100% {
+    background: rgba(238, 82, 83, 0.15);
+  }
+  50% {
+    background: rgba(238, 82, 83, 0.25);
+  }
 }
 
 /* Badge for alert count */
@@ -867,19 +877,177 @@ th, td {
   padding: 16px;
 }
 
-/* Compact Header: Title + Toggle inline */
+/* Compact Header */
 .alert-header-compact {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   margin-bottom: 12px;
+  text-align: center;
 }
 
 .alert-header-compact h3 {
-  margin: 0;
+  margin: 0 0 8px 0;
   font-size: 15px;
   color: #f2a900;
   font-weight: 600;
+}
+
+.alert-current-price {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+}
+
+.alert-price-label {
+  font-size: 13px;
+  color: #8aa0b6;
+  font-weight: 500;
+}
+
+.alert-price-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #f2a900;
+}
+
+/* Alert Rows */
+.alert-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding: 8px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 6px;
+}
+
+.alert-row-label {
+  font-size: 12px;
+  color: #e8eef7;
+  font-weight: 500;
+  min-width: 90px;
+}
+
+.alert-row-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.alert-select {
+  background: #0b1220;
+  color: #e8eef7;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  min-width: 70px;
+  height: 30px;
+  box-sizing: border-box;
+}
+
+.alert-select:focus {
+  outline: none;
+  border-color: #f2a900;
+}
+
+.alert-input-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.alert-input-wrapper {
+  display: flex;
+  align-items: center;
+  background: #0b1220;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 6px 8px;
+  height: 30px;
+  box-sizing: border-box;
+}
+
+.alert-input-wrapper:focus-within {
+  border-color: #f2a900;
+}
+
+.alert-currency-symbol,
+.alert-percent-symbol {
+  color: #f2a900;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 14px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.alert-input {
+  background: transparent;
+  border: none;
+  width: 90px;
+  padding: 0;
+  font-size: 14px;
+  color: #e8eef7;
+  font-weight: 500;
+  outline: none;
+  line-height: 14px;
+  height: 14px;
+  text-align: left;
+}
+
+.alert-input::placeholder {
+  color: #4a5568;
+  text-align: left;
+}
+
+/* Inline Toggle Switch */
+.toggle-switch-inline {
+  position: relative;
+  display: inline-block;
+  width: 38px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.toggle-switch-inline input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider-inline {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #333;
+  transition: 0.25s;
+  border-radius: 22px;
+}
+
+.toggle-slider-inline:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  bottom: 3px;
+  background-color: #666;
+  transition: 0.25s;
+  border-radius: 50%;
+}
+
+.toggle-switch-inline input:checked + .toggle-slider-inline {
+  background-color: #1dd1a1;
+}
+
+.toggle-switch-inline input:checked + .toggle-slider-inline:before {
+  transform: translateX(16px);
+  background-color: white;
 }
 
 /* Compact Toggle Switch */
@@ -929,118 +1097,49 @@ th, td {
   background-color: white;
 }
 
-/* Compact Input Row: Current Price | Input */
-.alert-input-row-compact {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: rgba(255,255,255,0.03);
-  border-radius: 6px;
-  padding: 12px;
-  margin-bottom: 8px;
-}
 
-.current-price-compact {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.target-price-compact {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.compact-label {
-  font-size: 10px;
-  color: #8aa0b6;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-weight: 500;
-}
-
-.compact-value {
-  font-size: 18px;
-  font-weight: 700;
-  color: #f2a900;
-}
-
-.vertical-divider {
-  width: 1px;
-  height: 40px;
-  background: rgba(255,255,255,0.1);
-}
-
-/* Compact Input */
-.compact-input-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: #0b1220;
-  border: 1px solid #333;
-  border-radius: 4px;
-  padding: 4px 8px;
-  transition: border-color 0.2s;
-}
-
-.compact-input-wrapper:focus-within {
-  border-color: #f2a900;
-}
-
-.compact-dollar {
-  color: #f2a900;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.compact-input {
-  background: transparent;
-  border: none;
-  width: 70px;
-  padding: 4px 0;
-  font-size: 14px;
-  color: #e0e7ed;
-  font-weight: 500;
-  outline: none;
-}
-
-.compact-input::placeholder {
-  color: #4a5568;
-}
-
-/* Compact Status Badge */
+/* Compact Status Badge - Per Design Guide */
 .alert-status-compact {
-  font-size: 11px;
+  font-size: 12px;
   text-align: center;
-  padding: 6px 10px;
-  border-radius: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
   margin-bottom: 8px;
   display: none;
 }
 
+/* Alert Active - Orange per design guide */
 .alert-status-compact.alert-active {
-  background: rgba(29, 209, 161, 0.15);
-  color: #1dd1a1;
+  background: rgba(242, 169, 0, 0.1);
+  color: #f2a900;
+  border: 1px solid rgba(242, 169, 0, 0.2);
   display: block;
 }
 
+/* Alert Triggered - Red with pulse per design guide */
+.alert-status-compact.alert-triggered {
+  background: rgba(238, 82, 83, 0.15);
+  color: #ee5253;
+  border: 1px solid rgba(238, 82, 83, 0.3);
+  animation: pulseBackground 2s ease-in-out infinite;
+  display: block;
+}
+
+/* Alert Disabled - Gray per design guide */
 .alert-status-compact.alert-disabled {
-  background: rgba(138, 160, 182, 0.15);
-  color: #8aa0b6;
+  background: transparent;
+  color: #666;
+  border: 1px solid #333;
   display: block;
 }
 
 /* Compact Buttons */
 .modal-buttons-compact {
   display: flex;
-  gap: 8px;
+  align-items: center;
   justify-content: flex-end;
   margin-top: 8px;
+  gap: 8px;
 }
 
 .btn-primary-compact {
