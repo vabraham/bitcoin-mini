@@ -8,7 +8,7 @@ A simple, secure, private and open source Bitcoin price tracker and address vaul
 [Install from Chrome Web Store](https://chromewebstore.google.com/detail/iffplmlgnkfhmonfnodgeajcgdlohode?utm_source=item-share-cb)
 
 ### Firefox Add-ons
-*Coming soon* - Extension will also be available for Firefox users.
+[Install from Firefox Browser Add-ons](https://addons.mozilla.org/en-US/firefox/addon/bitcoin-mini/)
 
 ### Other Browsers
 Also compatible with Edge, Brave, Opera, and other Chromium-based browsers via Chrome Web Store.
